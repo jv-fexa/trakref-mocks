@@ -1,144 +1,1326 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Import Systems — Trakref V4 Design Spec</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Compliance Center - Vertical V3 - Separate Page</title>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Open+Sans:wght@400;600;700&family=Material+Icons&family=Material+Icons+Outlined" rel="stylesheet">
 <style>
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Open Sans',-apple-system,sans-serif;background:#f5f5f5;color:rgba(26,23,59,0.87)}
-.shell{max-width:900px;margin:0 auto}
-.tabs{display:flex;overflow-x:auto;background:#fff;border-bottom:1px solid rgba(0,0,0,0.12);position:sticky;top:0;z-index:100}
-.tab{padding:10px 14px;border:none;border-bottom:2px solid transparent;background:transparent;font-size:11px;font-family:inherit;color:rgba(26,23,59,0.6);cursor:pointer;white-space:nowrap}
-.tab.active{color:#00859b;border-bottom-color:#00859b;font-weight:600}
-.view{display:none;min-height:460px}
-.view.active{display:block}
-.bg{background:#f9f9f9;padding:32px}
-.bc{font-size:10px;color:#707579;letter-spacing:0.73px;margin-bottom:16px}
-.page-hdr{display:flex;align-items:center;gap:24px;margin-bottom:24px}
-.page-title{font-size:22px;font-weight:400;color:#1a173b}
-.card{background:#fff;border:1px solid rgba(0,0,0,0.12);border-radius:5px;padding:24px;box-shadow:0px 3px 1px -2px rgba(0,0,0,0.2),0px 2px 2px rgba(0,0,0,0.14),0px 1px 5px rgba(0,0,0,0.12);max-width:720px}
-.card p{font-size:14px;color:rgba(26,23,59,0.6);line-height:1.43;margin-bottom:20px}
-.btns{display:flex;gap:12px}
-.btn{display:inline-flex;align-items:center;gap:8px;padding:8px 22px;border-radius:4px;font-size:14px;font-family:inherit;letter-spacing:0.4px;text-transform:uppercase;cursor:pointer;border:none}
-.btn-fill{background:#00859b;color:#fff}
-.btn-outline{background:transparent;border:1px solid rgba(0,133,155,0.5);color:#00859b}
-.btn-text{background:transparent;color:#00859b;padding:6px 8px;border:none}
-.btn-disabled{background:rgba(26,23,59,0.12);color:rgba(26,23,59,0.38);cursor:not-allowed}
-.overlay{position:relative;background:#f9f9f9;min-height:460px;display:flex;align-items:center;justify-content:center}
-.overlay-bg{position:absolute;inset:0;background:rgba(0,0,0,0.5)}
-.modal{position:relative;z-index:10;background:#fff;border-radius:4px;width:520px;box-shadow:0px 8px 10px -5px rgba(0,0,0,0.2),0px 16px 24px 2px rgba(0,0,0,0.14),0px 6px 30px 5px rgba(0,0,0,0.12);overflow:hidden}
-.modal-title{padding:16px 24px;font-size:20px;font-weight:700}
-.modal-body{padding:0 24px 20px}
-.modal-actions{display:flex;justify-content:flex-end;gap:8px;padding:8px}
-.stepper{display:flex;align-items:center;gap:8px;margin-bottom:24px}
-.step-group{display:flex;align-items:center;gap:8px;flex-shrink:0}
-.step-circle{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff}
-.step-active{background:#00859b}
-.step-future{background:rgba(26,23,59,0.38)}
-.step-label{font-size:14px;white-space:nowrap}
-.step-label-active{color:rgba(26,23,59,0.87)}
-.step-label-future{color:rgba(26,23,59,0.6)}
-.step-line{flex:1 0 0;height:1px;min-width:8px;background:#bdbdbd}
-.dropzone{border:2px dashed #e0e0e0;border-radius:4px;padding:36px 20px;text-align:center;background:#f9f9f9}
-.dropzone p{margin:0}
-.dropzone .main{font-size:16px;color:rgba(26,23,59,0.87);margin-top:12px;margin-bottom:4px}
-.dropzone .sub{font-size:12px;color:rgba(26,23,59,0.38)}
-.dropzone .link{color:#00859b}
-.file-row{display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:4px;background:#f9f9f9;border:1px solid rgba(0,0,0,0.12)}
-.file-row .name{font-size:14px;font-weight:500;color:rgba(26,23,59,0.87)}
-.file-row .meta{font-size:12px;color:rgba(26,23,59,0.6)}
-.file-row .x{background:none;border:none;cursor:pointer;font-size:18px;color:rgba(26,23,59,0.6)}
-.alert-success{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:4px;background:#edf7ed;margin-top:12px;font-size:14px;color:#1e4620}
-.alert-error{display:flex;align-items:flex-start;gap:10px;padding:12px 16px;border-radius:4px;background:#fdeded}
-.alert-error .title{font-size:14px;font-weight:600;color:#5f2120;margin-bottom:2px}
-.alert-error .desc{font-size:14px;color:#5f2120}
-.spinner-wrap{text-align:center;padding:20px 0}
-.spinner{width:36px;height:36px;border:3px solid #e0e0e0;border-top:3px solid #00859b;border-radius:50%;margin:0 auto 16px;animation:spin 0.8s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
-.progress{margin-top:20px;background:#e0e0e0;border-radius:2px;height:4px;overflow:hidden}
-.progress-bar{height:100%;background:#00859b;border-radius:2px}
-.result-icon{text-align:center;margin-bottom:16px}
-.result-icon .msg-title{font-size:16px;font-weight:600;margin:8px 0 4px}
-.result-icon .msg-sub{font-size:14px;color:rgba(26,23,59,0.6)}
-.summary{display:flex;gap:12px;margin-bottom:16px}
-.summary-tile{flex:1;padding:12px;border-radius:4px;text-align:center}
-.summary-tile .num{font-size:22px;font-weight:700}
-.summary-tile .lbl{font-size:12px}
-.post-note{display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:4px;background:#f9f9f9;border:1px solid rgba(0,0,0,0.12);font-size:12px;color:rgba(26,23,59,0.6)}
-.post-note strong{color:rgba(26,23,59,0.87)}
-.tbl-wrap{border-radius:4px;border:1px solid rgba(0,0,0,0.12);overflow:auto;background:#fff;margin-bottom:16px}
-table{border-collapse:collapse;width:100%;min-width:700px}
-th{font-size:12px;font-weight:700;padding:10px 12px;text-align:left;background:#f9f9f9;border-bottom:1px solid rgba(0,0,0,0.12);white-space:nowrap}
-td{font-size:14px;padding:9px 12px;border-bottom:1px solid rgba(0,0,0,0.12)}
-.s-ok{background:#C6EFCE;color:#1e4620;font-weight:700;font-size:13px}
-.s-fail{background:#FFC7CE;color:#5f2120;font-weight:700;font-size:13px}
-.f-warn{background:#FFFFCC}
-.legend{display:flex;gap:20px;font-size:12px;color:rgba(26,23,59,0.6)}
-.legend-item{display:flex;align-items:center;gap:6px}
-.legend-sw{width:14px;height:14px;border-radius:2px;border:1px solid rgba(0,0,0,0.12)}
-.col-ref{margin-top:24px}
-.col-ref h3{font-size:16px;font-weight:700;margin-bottom:12px}
-.col-ref table{min-width:auto}
-.col-ref th{font-size:11px;background:#f5f5f5}
-.col-ref td{font-size:13px;vertical-align:top}
-.badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:3px;font-weight:600}
-.badge-req{background:#e3f2fd;color:#1565c0}
-.badge-opt{background:#f5f5f5;color:rgba(26,23,59,0.6)}
-.badge-locked{background:#e0e0e0;color:#757575}
-.access-denied{background:#fff;min-height:460px;display:flex;align-items:center;justify-content:center}
-.ad-card{width:448px;text-align:center}
-.ad-inner{background:#fff;border-radius:6px;border:0.667px solid rgba(0,0,0,0.12);box-shadow:0px 3px 1px -2px rgba(0,0,0,0.2),0px 2px 2px rgba(0,0,0,0.14),0px 1px 5px rgba(0,0,0,0.12);padding:33px;margin-bottom:24px}
-.ad-icon{width:80px;height:80px;border-radius:50%;background:rgba(211,47,47,0.1);display:flex;align-items:center;justify-content:center;margin:0 auto 24px}
-.ad-title{font-size:16px;margin-bottom:16px}
-.ad-sub{font-size:16px;color:rgba(26,23,59,0.38);margin-bottom:24px}
-.ad-footer{font-size:16px;color:rgba(26,23,59,0.38)}
-.ad-btn{font-size:16px;font-family:inherit;padding:10px 24px;height:44px;background:#00859b;color:#fff;border:none;border-radius:4px;cursor:pointer}
-.icon{display:inline-block;vertical-align:middle}
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --primary: #00859B;
+    --primary-light: #00B0B9;
+    --primary-dark: #006D80;
+    --primary-50: #E0F4F6;
+    --text-primary: #212121;
+    --text-secondary: #757575;
+    --text-disabled: #BDBDBD;
+    --divider: #EEEEEE;
+    --border: #E0E0E0;
+    --bg-paper: #FAFAFA;
+    --page-bg: #F9F9F9;
+    --green: #388E3C;
+    --orange: #F57C00;
+    --red: #D32F2F;
+    --header-teal: #008299;
+    --tr-teal: #00859B;
+    --tr-secondary: #00B0B9;
+    --tr-table-text: #1A173B;
+    --slate: #6D7588;
+    --reg-epa608: #00897B;
+    --reg-carb: #F57C00;
+    --reg-wa: #1976D2;
+    --reg-nj: #C2185B;
+    --reg-ny: #7B1FA2;
+    --reg-aim: #388E3C;
+  }
+  html, body { background: var(--page-bg); }
+  html, body {
+    font-family: 'Roboto', -apple-system, sans-serif;
+    color: var(--text-primary);
+    background: var(--bg-paper);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  /* Chrome */
+  .app-header {
+    background: var(--header-teal);
+    color: #fff;
+    height: 96px;
+    padding: 24px 16px;
+    display: flex; align-items: center;
+    gap: 32px;
+    position: sticky; top: 0; z-index: 100;
+  }
+  .brand { font-weight: 700; font-size: 18px; letter-spacing: 0.3px; white-space: nowrap; }
+  .brand .fexa { font-weight: 400; opacity: 0.85; }
+  .hamburger {
+    display: none;
+    background: none; border: none; color: #fff;
+    cursor: pointer; padding: 8px;
+  }
+  .hamburger .material-icons { font-size: 24px; }
+  .search-bar {
+    flex: 1; max-width: 456px;
+    background: #fff; border-radius: 6px;
+    height: 48px;
+    display: flex; align-items: center;
+    padding: 14.5px 16px;
+    gap: 24px;
+    color: var(--slate);
+    font-family: 'Open Sans', sans-serif;
+    font-size: 14px; font-weight: 600;
+  }
+  .search-bar .material-icons { color: var(--header-teal); font-size: 19px; }
+  .header-right { margin-left: auto; display: flex; align-items: center; gap: 20px; font-size: 14px; white-space: nowrap; }
+  .header-icons { display: flex; gap: 12px; align-items: center; }
+  .header-icons .material-icons { font-size: 22px; opacity: 0.95; cursor: pointer; }
+
+  .app-body { display: grid; grid-template-columns: 203px 1fr; min-height: calc(100vh - 96px); }
+  .sidebar {
+    background: #fff;
+    border-right: 1px solid var(--divider);
+    padding: 16px 0;
+    transition: transform 0.25s ease;
+  }
+  .sidebar-overlay {
+    display: none;
+    position: fixed; inset: 96px 0 0 0;
+    background: rgba(0,0,0,0.45);
+    z-index: 90;
+  }
+  .sidebar a {
+    display: flex; align-items: center; gap: 16px;
+    padding: 12px 20px; color: #5F6368;
+    text-decoration: none;
+    font-family: 'Open Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 400;
+    border-left: 3px solid transparent;
+    min-height: 48px;
+    box-sizing: border-box;
+    position: relative;
+  }
+  .sidebar a:hover { background: #F5F5F5; }
+  .sidebar a.active {
+    color: var(--primary);
+    border-left-color: var(--primary);
+    font-weight: 600;
+    background: transparent;
+  }
+  .sidebar .material-icons-outlined,
+  .sidebar .material-icons { font-size: 22px; color: #5F6368; }
+  .sidebar a.active .material-icons-outlined,
+  .sidebar a.active .material-icons { color: var(--primary); }
+  .sidebar .dropdown-chev {
+    margin-left: auto; font-size: 18px;
+  }
+
+  .main { padding: 24px 16px 64px; overflow-x: auto; }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .app-header {
+      height: 80px;
+      padding: 16px;
+      gap: 8px;
+    }
+    .hamburger { display: inline-flex; }
+    .brand { font-size: 16px; }
+    .search-bar {
+      height: 48px;
+      max-width: 153px;
+      padding: 14.5px 16px;
+      font-size: 0;
+    }
+    .search-bar .material-icons { font-size: 19px; }
+    .header-right > div:not(.header-icons) { display: none; }
+    .app-body { grid-template-columns: 1fr; min-height: calc(100vh - 80px); }
+    .sidebar {
+      position: fixed; left: 0; top: 80px; bottom: 0;
+      width: 272px;
+      z-index: 95;
+      transform: translateX(-100%);
+      box-shadow: 2px 0 8px rgba(0,0,0,0.15);
+    }
+    .sidebar.open { transform: translateX(0); }
+    .sidebar-overlay.show { display: block; top: 80px; }
+    .main { padding: 16px 12px 48px; }
+  }
+
+  /* Card */
+  .card {
+    background: #fff;
+    border: 1px solid var(--divider);
+    border-radius: 4px;
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+
+  /* Page title */
+  .crumb { color: var(--text-secondary); font-size: 12px; margin-bottom: 6px; }
+  .crumb.back-mode {
+    color: var(--tr-teal);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .crumb.back-mode:hover { opacity: 0.75; }
+  .crumb.back-mode .material-icons { font-size: 18px; }
+  .page-title { font-size: 24px; font-weight: 400; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
+  .page-title .material-icons { font-size: 18px; color: var(--text-secondary); }
+
+  /* Section header inside card */
+  .section-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; }
+  .section-header h3 { font-size: 15px; font-weight: 500; display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+  .section-header h3 .material-icons { font-size: 16px; color: var(--text-secondary); }
+  .section-header .subtitle { color: var(--text-secondary); font-size: 12px; }
+  .legend { display: flex; gap: 20px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-secondary); }
+  .legend-swatch {
+    width: 18px;
+    height: 18px;
+    border-radius: 4px;
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(135deg,
+      #00897B 0%, #00897B 16.66%,
+      #388E3C 16.66%, #388E3C 33.33%,
+      #F57C00 33.33%, #F57C00 50%,
+      #1976D2 50%, #1976D2 66.66%,
+      #C2185B 66.66%, #C2185B 83.33%,
+      #7B1FA2 83.33%, #7B1FA2 100%);
+  }
+  .legend-swatch::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, 0);
+    border-radius: 4px;
+  }
+  .legend-swatch.attention::after { background: rgba(255, 255, 255, 0.58); }
+
+  /* Vertical chart columns */
+  .v-chart {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 8px;
+    padding: 8px 0;
+  }
+  .reg-column {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    padding: 16px 8px 12px;
+    border-radius: 6px;
+    border-top: 3px solid transparent;
+    transition: background 0.15s;
+  }
+  .reg-column:hover { background: #F5F5F5; }
+  .reg-column[data-reg="epa608"].selected { border-top-color: var(--reg-epa608); background: #F5F5F5; }
+  .reg-column[data-reg="aim"].selected { border-top-color: var(--reg-aim); background: #F5F5F5; }
+  .reg-column[data-reg="carb"].selected { border-top-color: var(--reg-carb); background: #F5F5F5; }
+  .reg-column[data-reg="wa"].selected { border-top-color: var(--reg-wa); background: #F5F5F5; }
+  .reg-column[data-reg="nj"].selected { border-top-color: var(--reg-nj); background: #F5F5F5; }
+  .reg-column[data-reg="ny"].selected { border-top-color: var(--reg-ny); background: #F5F5F5; }
+
+  .v-total {
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--text-secondary);
+    text-align: center;
+    margin-bottom: 6px;
+    font-family: 'Open Sans', sans-serif;
+  }
+  .v-bar-wrap {
+    width: 100%;
+    height: 240px;
+    display: flex;
+    align-items: flex-end;
+    margin-bottom: 14px;
+  }
+  .v-bar {
+    width: 100%;
+    height: 100%;
+    max-width: 64px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    border-radius: 4px;
+    background: var(--divider);
+    overflow: hidden;
+  }
+  .v-segment {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    min-height: 24px;
+    transition: flex-grow 0.3s;
+  }
+  .v-segment.healthy {
+    background: var(--reg-color);
+    color: #fff;
+  }
+  .v-segment.attention {
+    background: color-mix(in srgb, var(--reg-color) 42%, white);
+    color: #000;
+  }
+
+  .v-label {
+    text-align: center;
+    font-family: 'Open Sans', sans-serif;
+    width: 100%;
+  }
+  .v-name {
+    display: flex; align-items: center; justify-content: center; gap: 4px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 2px;
+    white-space: nowrap;
+  }
+  .v-chevron {
+    font-size: 16px !important;
+    color: var(--text-secondary);
+    transition: color 0.2s;
+  }
+  .reg-column:hover .v-chevron { color: var(--text-primary); }
+  .reg-column.selected .v-chevron { color: var(--primary); }
+  .v-scope { font-size: 11px; color: var(--text-secondary); }
+  .v-see-detail {
+    margin-top: 6px;
+    font-size: 11px;
+    color: var(--text-secondary);
+    opacity: 0;
+    transition: opacity 0.2s;
+    height: 14px;
+  }
+  .reg-column:hover .v-see-detail { opacity: 1; }
+
+  @media (max-width: 768px) {
+    .v-chart { gap: 4px; }
+    .v-bar { max-width: 100%; }
+    .v-name { font-size: 11px; }
+    .v-scope { font-size: 10px; }
+    .v-total { font-size: 15px; }
+    .v-bar-wrap { height: 180px; }
+    .v-see-detail { display: none; }
+  }
+  @media (max-width: 480px) {
+    .v-chart {
+      overflow-x: auto;
+      grid-template-columns: repeat(6, 70px);
+    }
+  }
+
+  /* Drill-down header */
+  .back-link {
+    display: inline-flex; align-items: center; gap: 4px;
+    color: var(--primary); cursor: pointer; font-size: 13px;
+    margin-bottom: 12px; text-decoration: none; background: none; border: none; padding: 0;
+    font-family: inherit;
+  }
+  .back-link:hover { text-decoration: underline; }
+  .back-link .material-icons { font-size: 18px; }
+
+  .reg-header {
+    display: flex; align-items: flex-start; gap: 16px;
+    margin-bottom: 6px;
+  }
+  .drilldown-close {
+    background: none; border: 1px solid var(--divider); border-radius: 50%;
+    width: 32px; height: 32px;
+    cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+    color: var(--text-secondary);
+    flex-shrink: 0;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+    font-family: inherit;
+  }
+  .drilldown-close:hover {
+    background: var(--bg-paper);
+    color: var(--text-primary);
+    border-color: var(--border);
+  }
+  .drilldown-close .material-icons { font-size: 18px; }
+  .reg-color-tag-large {
+    width: 6px; height: 36px; border-radius: 3px;
+    margin-top: 4px; flex-shrink: 0;
+  }
+  .reg-color-tag-large.epa608 { background: var(--reg-epa608); }
+  .reg-color-tag-large.aim { background: var(--reg-aim); }
+  .reg-color-tag-large.carb { background: var(--reg-carb); }
+  .reg-color-tag-large.wa { background: var(--reg-wa); }
+  .reg-color-tag-large.nj { background: var(--reg-nj); }
+  .reg-color-tag-large.ny { background: var(--reg-ny); }
+  .reg-title-block { flex: 1; }
+  .reg-title { font-size: 24px; font-weight: 400; }
+  .reg-citation { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+  .reg-meta-row {
+    display: flex; gap: 24px; font-size: 13px; color: var(--text-secondary);
+    margin-bottom: 24px; margin-left: 22px;
+  }
+  .reg-meta-row strong { color: var(--text-primary); font-weight: 500; }
+  .reg-scope-badge {
+    display: inline-block; font-size: 11px;
+    padding: 2px 8px; border-radius: 10px; font-weight: 500;
+    text-transform: uppercase; letter-spacing: 0.4px;
+  }
+  .reg-scope-badge.federal { background: #E3F2FD; color: var(--primary-dark); }
+  .reg-scope-badge.state { background: #F3E5F5; color: #6A1B9A; }
+
+  /* Tiles */
+  .tiles { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; margin-bottom: 24px; }
+
+  @media (max-width: 1100px) {
+    .tiles { grid-template-columns: repeat(3, 1fr); }
+  }
+  @media (max-width: 600px) {
+    .tiles { grid-template-columns: repeat(2, 1fr); }
+    .section-header { flex-direction: column; gap: 12px; }
+    .legend { flex-wrap: wrap; }
+  }
+  .tile {
+    background: #fff;
+    border: 1px solid var(--divider);
+    border-radius: 4px;
+    padding: 16px;
+    cursor: pointer;
+    transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+    display: flex; flex-direction: column;
+    min-height: 148px;
+  }
+  .tile:hover:not(.disabled):not(.selected) {
+    border-color: var(--primary);
+    box-shadow: 0 2px 8px rgba(25,118,210,0.12);
+  }
+  .tile.selected {
+    border-color: var(--primary);
+    background: var(--primary-50);
+    box-shadow: 0 2px 8px rgba(25,118,210,0.16);
+  }
+  .tile.selected .tile-title { color: var(--primary); }
+  .tile.disabled {
+    background: #fafafa; cursor: not-allowed;
+    border-style: dashed;
+  }
+  .tile-title {
+    font-size: 11px; color: var(--text-secondary);
+    margin-bottom: 12px; text-transform: uppercase;
+    letter-spacing: 0.5px; font-weight: 500;
+    min-height: 28px;
+  }
+  .tile-count {
+    font-size: 32px; font-weight: 300;
+    color: var(--text-primary); margin-bottom: 8px;
+    line-height: 1;
+  }
+  .tile.disabled .tile-count { color: var(--text-disabled); font-size: 24px; }
+  .tile-disabled-note {
+    font-size: 11px; color: var(--text-secondary);
+    font-style: italic; line-height: 1.4;
+  }
+  .severity-row { display: flex; gap: 6px; margin-top: auto; flex-wrap: wrap; }
+  .severity-badge {
+    font-size: 11px; padding: 2px 8px; border-radius: 10px;
+    font-weight: 500;
+  }
+  .sev-30 { background: #FFF3E0; color: #E65100; }
+  .sev-90 { background: #FFEBEE; color: #C62828; }
+  .sev-365 { background: #FFCDD2; color: #B71C1C; }
+  .tile-footnote {
+    font-size: 11px; color: var(--text-secondary);
+    margin-top: auto; padding-top: 8px;
+  }
+  .tile-footnote.warn { color: var(--orange); }
+
+  /* Data integrity alert */
+  .data-integrity-alert {
+    background: #FFF8E1;
+    border-left: 3px solid #FFB300;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    border-radius: 0 4px 4px 0;
+    font-size: 13px;
+  }
+  .data-integrity-alert .material-icons { color: #F57C00; font-size: 20px; flex-shrink: 0; }
+  .data-integrity-alert .alert-body { flex: 1; color: #5D4037; line-height: 1.5; }
+  .data-integrity-alert .alert-body strong { color: #3E2723; font-weight: 500; }
+  .data-integrity-alert a { color: var(--primary); text-decoration: none; margin-left: 4px; cursor: pointer; }
+  .data-integrity-alert a:hover { text-decoration: underline; }
+
+  /* Version selector - floating at bottom */
+  .version-selector {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 200;
+    display: flex;
+    gap: 0;
+    background: #fff;
+    border: 1px solid var(--divider);
+    border-radius: 100px;
+    padding: 4px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+  }
+  .version-btn {
+    padding: 8px 18px;
+    font-family: 'Roboto', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    background: none;
+    border: none;
+    cursor: pointer;
+    border-radius: 100px;
+    transition: background 0.15s, color 0.15s;
+    white-space: nowrap;
+  }
+  .version-btn.active {
+    background: var(--primary);
+    color: #fff;
+  }
+  .version-btn:not(.active):hover {
+    background: #F5F5F5;
+  }
+
+  /* Tabs */
+  .tabs-container {
+    display: flex;
+    gap: 32px;
+    border-bottom: 1px solid var(--divider);
+    margin-bottom: 20px;
+    overflow-x: auto;
+  }
+  .tab-item {
+    padding: 12px 0;
+    color: var(--text-secondary);
+    font-family: 'Open Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 400;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    white-space: nowrap;
+    transition: border-color 0.15s, color 0.15s;
+    background: none; border-top: none; border-left: none; border-right: none;
+  }
+  .tab-item:hover:not(.active):not(.disabled) {
+    color: var(--text-primary);
+  }
+  .tab-item.active {
+    color: var(--text-primary);
+    font-weight: 700;
+    border-bottom-color: var(--tr-teal);
+  }
+  .tab-item.disabled {
+    color: var(--text-disabled);
+    cursor: not-allowed;
+  }
+
+  /* Asset table */
+  .table-section .section-title {
+    font-size: 15px; font-weight: 500; margin-bottom: 4px;
+  }
+  .table-section .section-sub {
+    color: var(--text-secondary); font-size: 12px; margin-bottom: 16px;
+  }
+  /* Table controls (toolbar) */
+  .table-controls {
+    display: flex; gap: 24px; margin-bottom: 8px;
+    align-items: center;
+    padding: 0 0 4px;
+  }
+  .table-control {
+    font-family: 'Roboto', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--tr-teal);
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .table-control:hover { opacity: 0.85; }
+  .table-control .material-icons { font-size: 18px; }
+
+  /* Table */
+  .table-wrap {
+    overflow-x: auto;
+    background: #fff;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'Roboto', sans-serif;
+  }
+  th, td {
+    text-align: left;
+    padding: 12px 16px;
+    font-size: 14px;
+    color: var(--text-primary);
+    vertical-align: middle;
+    height: 49px;
+    box-sizing: border-box;
+  }
+  th {
+    background: #fff;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--divider);
+    white-space: nowrap;
+  }
+  .th-content {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 8px;
+  }
+  .th-kebab {
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 18px;
+    opacity: 0.5;
+  }
+  .th-kebab:hover { opacity: 0.85; }
+
+  /* No outer borders; subtle zebra */
+  tbody tr { border-bottom: 1px solid var(--divider); }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:nth-child(even) { background: #FAFAFA; }
+  tbody tr:hover { background: #F0F7FF; }
+
+  td a {
+    color: var(--tr-teal);
+    text-decoration: none;
+    cursor: pointer;
+  }
+  td a:hover { text-decoration: underline; }
+
+  /* Table footer */
+  .table-footer {
+    display: flex; align-items: center; justify-content: center;
+    gap: 26px;
+    padding: 12px;
+    background: #fff;
+    font-size: 12px;
+    color: var(--text-primary);
+    font-family: 'Roboto', sans-serif;
+  }
+  .footer-rows {
+    display: flex; align-items: center; gap: 8px;
+  }
+  .footer-rows-select {
+    display: inline-flex; align-items: center; gap: 2px;
+    cursor: pointer;
+  }
+  .footer-rows-select .material-icons { font-size: 18px; }
+  .footer-nav { display: flex; align-items: center; gap: 0; }
+  .footer-nav-btn {
+    width: 32px; height: 32px;
+    display: inline-flex; align-items: center; justify-content: center;
+    border-radius: 50%; cursor: pointer;
+    color: var(--text-primary);
+    background: none; border: none;
+    transition: background 0.15s;
+  }
+  .footer-nav-btn:hover:not(:disabled) { background: rgba(0,0,0,0.04); }
+  .footer-nav-btn:disabled { color: var(--text-disabled); cursor: default; }
+  .footer-nav-btn .material-icons { font-size: 20px; }
+  .status-pill {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 11px; padding: 3px 8px; border-radius: 10px;
+    font-weight: 500;
+  }
+  .pill-red { background: #FFEBEE; color: #C62828; }
+  .pill-orange { background: #FFF3E0; color: #E65100; }
+  .pill-grey { background: #F5F5F5; color: var(--text-secondary); }
+  .pill-no-prior { background: #FFF8E1; color: #6D4C41; border: 1px solid #FFE082; }
+  .pill-missing { background: #FAFAFA; color: var(--text-secondary); border: 1px dashed var(--border); font-style: italic; }
+
+  /* NJ empty state */
+  .empty-drilldown-info {
+    background: #fff;
+    border: 1px solid var(--divider);
+    border-radius: 4px;
+    padding: 32px 24px;
+    text-align: center;
+    margin-bottom: 24px;
+  }
+  .empty-drilldown-info .material-icons { font-size: 36px; color: var(--text-secondary); margin-bottom: 8px; }
+  .empty-drilldown-info h4 { font-size: 16px; font-weight: 500; margin-bottom: 8px; }
+  .empty-drilldown-info p { font-size: 13px; color: var(--text-secondary); max-width: 560px; margin: 0 auto; }
+
+  .view { display: none; }
+  .view.active { display: block; }
 </style>
 </head>
 <body>
-<div class="shell">
-<div class="tabs" id="tabs"></div>
-<div id="views"></div>
+
+<header class="app-header">
+  <button class="hamburger" onclick="toggleSidebar()" aria-label="Menu">
+    <span class="material-icons">menu</span>
+  </button>
+  <div class="brand">✕ <span class="fexa">Fexa</span>Trakref</div>
+  <div class="search-bar">
+    <span class="material-icons">search</span>
+    <span>Search for Work Orders, Locations and more…</span>
+  </div>
+  <div class="header-right">
+    <div class="header-icons">
+      <span class="material-icons">notifications_none</span>
+      <span class="material-icons">help_outline</span>
+    </div>
+    <div>
+      <div>Hi Janina</div>
+      <div style="font-size:12px;opacity:0.85;">Cloud Compliance Real Estate</div>
+    </div>
+  </div>
+</header>
+
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+<div class="app-body">
+  <nav class="sidebar" id="sidebar">
+    <a href="#"><span class="material-icons-outlined">home</span>Home</a>
+    <a href="#"><span class="material-icons-outlined">speed</span>Dashboard</a>
+    <a href="#" class="active"><span class="material-icons-outlined">fact_check</span>Compliance Center</a>
+    <a href="#"><span class="material-icons-outlined">assignment_turned_in</span>Work Orders</a>
+    <a href="#"><span class="material-icons-outlined">description</span>Service Events</a>
+    <a href="#"><span class="material-icons-outlined">location_on</span>Locations</a>
+    <a href="#"><span class="material-icons-outlined">playlist_add_check</span>Inventory<span class="material-icons dropdown-chev">expand_more</span></a>
+    <a href="#"><span class="material-icons-outlined">pie_chart</span>Reports</a>
+    <a href="#"><span class="material-icons-outlined">bar_chart</span>BI Dashboard</a>
+    <a href="#"><span class="material-icons-outlined">table_chart</span>Analytics</a>
+    <a href="#"><span class="material-icons-outlined">lightbulb</span>Insights</a>
+  </nav>
+
+  <main class="main">
+
+    <div class="crumb" id="pageCrumb">Compliance Center</div>
+    <h1 class="page-title" id="pageTitle">Compliance Center <span class="material-icons">info_outline</span></h1>
+
+    <div class="card" id="chartCard" style="margin-top: 20px;">
+      <div class="section-header">
+        <div>
+          <h3>Compliance Health by Regulation <span class="material-icons">info_outline</span></h3>
+          <div class="subtitle">Click a regulation to see what's due, exceeded, or trending under that rule.</div>
+        </div>
+        <div>
+          <div class="legend">
+            <div class="legend-item"><span class="legend-swatch healthy"></span>Healthy</div>
+            <div class="legend-item"><span class="legend-swatch attention"></span>Needs attention</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="v-chart" id="regRows"></div>
+    </div>
+
+    <!-- Inline drill-down (hidden until a regulation is selected) -->
+    <div id="drilldown" class="card" style="display:none;">
+      <div class="reg-header">
+        <div class="reg-color-tag-large" id="dColorTag"></div>
+        <div class="reg-title-block">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span class="reg-title" id="dTitle">Regulation</span>
+            <span class="reg-scope-badge" id="dScopeBadge">Scope</span>
+          </div>
+          <div class="reg-citation" id="dCitation">Citation</div>
+        </div>
+        <button class="drilldown-close" onclick="hideDrill()" title="Close">
+          <span class="material-icons">close</span>
+        </button>
+      </div>
+      <div class="reg-meta-row" id="dMeta"></div>
+
+      <div id="dDataIntegrity"></div>
+
+      <div class="tiles" id="dTiles"></div>
+
+      <div id="dContent"></div>
+    </div>
+
+    <!-- Cross-regulation tables (always visible, sits below drill-down when open) -->
+    <div class="card" id="crossRegSection">
+      <div class="tabs-container" id="crossTabs"></div>
+      <div id="crossContent"></div>
+    </div>
+
+  </main>
 </div>
+
 <script>
-var views=[
-{id:"systems-page",label:"1. Import Systems Page",html:function(){return '<div class="bg"><p class="bc">Home > Geek Command Center > Import Customer Data > Import Systems</p><div class="page-hdr"><span style="font-size:24px;cursor:pointer">&#10005;</span><span class="page-title">Import Systems</span></div><div class="card"><p>Import Systems Template (.xls or .xlsx) with data entered on the worksheet titled \'ImportSystems\'. The first row is ignored for column titles. Required fields are marked with an asterisk (*) and ordered first. Template includes account-specific dropdown values for Location, Material Type, Manufacturer, and other reference data.</p><div class="btns"><button class="btn btn-outline">&#11015; DOWNLOAD TEMPLATE</button><button class="btn btn-fill">&#11014; IMPORT SYSTEMS</button></div></div></div>';}},
-{id:"modal-empty",label:"2. Upload Modal (empty)",html:function(){return overlay(stepper(0)+'<div class="dropzone"><div style="font-size:36px;color:#bdbdbd">&#11014;</div><p class="main">Drag &amp; drop your file here, or <span class="link">browse</span></p><p class="sub">Accepted formats: .xls, .xlsx</p></div>','<button class="btn btn-disabled">UPLOAD</button>');}},
-{id:"modal-review",label:"3. Step 1: File Reviewed",html:function(){return overlay(stepper(0)+'<div class="file-row"><span class="icon">&#128196;</span><div style="flex:1"><div class="name">Target_RefrigerationSystems_2026.xlsx</div><div class="meta">156 KB &middot; Sheet: ImportSystems &#10003;</div></div><button class="x">&#10005;</button></div><div class="alert-success"><span style="color:#2e7d32">&#10004;</span> File structure validated &mdash; ready to import</div>','<button class="btn btn-text">CANCEL</button><button class="btn btn-fill">UPLOAD</button>');}},
-{id:"modal-validating",label:"4. Step 2: Validate & Import",html:function(){return overlay(stepper(1)+'<div class="spinner-wrap"><div class="spinner"></div><p style="font-size:16px;font-weight:500;margin-bottom:4px">Validating &amp; importing systems...</p><p style="font-size:14px;color:rgba(26,23,59,0.6)">Running row-by-row validations and importing valid rows</p><div class="progress"><div class="progress-bar" style="width:65%"></div></div><p style="font-size:12px;color:rgba(26,23,59,0.38);margin-top:8px">Processing row 13 of 20&hellip;</p></div>','');}},
-{id:"modal-success",label:"5a. All Succeeded",html:function(){return overlay(stepper(3)+'<div class="result-icon"><div style="font-size:40px;color:#2e7d32">&#10004;</div><p class="msg-title">Import Successful</p><p class="msg-sub">All systems were imported successfully.</p></div>'+summaryBar(20,0,20)+postNote("Systems"),'<button class="btn btn-fill">DONE</button>');}},
-{id:"modal-partial",label:"5b. Partial Success",html:function(){return overlay(stepper(3)+'<div class="result-icon"><div style="font-size:40px;color:#ed6c02">&#9888;</div><p class="msg-title">Import Partially Successful</p><p class="msg-sub">Some rows had validation errors. Review the post-upload file to correct errors.</p></div>'+summaryBar(14,6,20)+postNote("Systems"),'<button class="btn btn-fill">DONE</button>');}},
-{id:"modal-fail",label:"5c. All Failed",html:function(){return overlay(stepper(3)+'<div class="result-icon"><div style="font-size:40px;color:#d32f2f">&#9888;</div><p class="msg-title">Import Not Successful</p><p class="msg-sub">All rows had validation errors. Review the post-upload file to correct errors.</p></div>'+summaryBar(0,20,20)+postNote("Systems"),'<button class="btn btn-text">CLOSE</button><button class="btn btn-fill">TRY AGAIN</button>');}},
-{id:"modal-file-error",label:"6. File Structure Error",html:function(){return overlay(stepper(0)+'<div class="file-row" style="margin-bottom:12px"><span style="color:#d32f2f">&#128196;</span><div style="flex:1"><div class="name">WrongFormat.csv</div><div class="meta">8 KB</div></div><button class="x">&#10005;</button></div><div class="alert-error"><span style="color:#d32f2f;font-size:20px;flex-shrink:0">&#9888;</span><div><div class="title">Import is not possible</div><div class="desc">Please use the template and format provided. Accepted: .xls or .xlsx with the worksheet &ldquo;ImportSystems&rdquo;.</div></div></div>','<button class="btn btn-text">CANCEL</button><button class="btn btn-outline">&#11015; DOWNLOAD TEMPLATE</button>');}},
-{id:"post-upload",label:"7. Post-Upload File",html:function(){var rows=[{s:"Success",n:"RTU-01",t:"Comfort Cooling",l:"Main Warehouse",c:"12 lbs",e:[]},{s:"Success",n:"Chiller-3A",t:"Refrigeration",l:"North Service HQ",c:"85 lbs",e:[]},{s:"Failed",n:"",t:"Process Cooling",l:"South Bay Depot",c:"40 lbs",e:["n"]},{s:"Success",n:"Walk-In-02",t:"Refrigeration",l:"East Facility",c:"22 lbs",e:[]},{s:"Failed",n:"AHU-15",t:"",l:"West Campus",c:"55 lbs",e:["t"]}];var trs=rows.map(function(r){return "<tr><td class=\"s-"+(r.s==="Success"?"ok":"fail")+"\">"+r.s+"</td><td"+(r.e.indexOf("n")>-1?" class=\"f-warn\"":"")+">"+(r.n||"&mdash;")+"</td><td"+(r.e.indexOf("t")>-1?" class=\"f-warn\"":"")+">"+(r.t||"&mdash;")+"</td><td>"+r.l+"</td><td>"+r.c+"</td></tr>";}).join("");return '<div class="bg"><p style="font-size:16px;font-weight:700;margin-bottom:4px">Post-Upload File Preview</p><p style="font-size:12px;color:rgba(26,23,59,0.6);margin-bottom:4px">SystemsPostUpload-20260303-143022.xlsx</p><p style="font-size:12px;color:rgba(26,23,59,0.38);margin-bottom:16px">Auto-downloaded after import completes</p><div class="tbl-wrap"><table><thead><tr><th>Import Status</th><th>System Name *</th><th>System Type *</th><th>Location *</th><th>Full Charge *</th></tr></thead><tbody>'+trs+'</tbody></table></div><div class="legend"><div class="legend-item"><div class="legend-sw" style="background:#C6EFCE"></div> Success (#C6EFCE)</div><div class="legend-item"><div class="legend-sw" style="background:#FFC7CE"></div> Failed (#FFC7CE)</div><div class="legend-item"><div class="legend-sw" style="background:#FFFFCC"></div> Field Error (#FFFFCC)</div></div></div>';}},
-{id:"template-cols",label:"8. Template Columns",html:function(){var cols=[["A","Import Status","Locked","System","Auto-populated after import. Do not edit."],["B","System Name","Yes","Text","Required. Unique name for the system."],["C","System Type","Yes","Dropdown","Comfort Cooling, Refrigeration, or Process Cooling."],["D","Location","Yes","Dropdown","Service Location type. Account-specific values."],["E","Sublocation","No","Dropdown","Account-specific values."],["F","Manufacturer","No","Dropdown","Account-specific values."],["G","Model","No","Text","Optional."],["H","Serial Number","No","Text","Optional."],["I","Year Manufactured","No","Number","4-digit year. Optional."],["J","Full Charge (lbs)","Yes","Number","Total refrigerant charge in pounds. Required."],["K","Refrigerant Type","Yes","Dropdown","Material type. Account-specific values."],["L","Acquired From","No","Dropdown","Wholesaler/Supplier location type. Account-specific."],["M","Date Acquired","No","Date","MM/DD/YYYY format. Optional."],["N","Notes","No","Text","Optional."]];var trs=cols.map(function(c,i){var badge=c[2]==="Locked"?"locked":c[2]==="Yes"?"req":"opt";return "<tr"+(i%2===1?" style=\"background:#fafafa\"":"")+'><td><code>'+c[0]+'</code></td><td>'+c[1]+'</td><td><span class="badge badge-'+badge+'">'+c[2]+'</span></td><td>'+c[3]+'</td><td>'+c[4]+'</td></tr>';}).join("");return '<div class="bg"><p style="font-size:16px;font-weight:700;margin-bottom:4px">ImportSystemsTemplate.xlsx &mdash; Column Reference</p><p style="font-size:12px;color:rgba(26,23,59,0.6);margin-bottom:16px">Worksheet: &ldquo;ImportSystems&rdquo; &middot; Row 1 = headers (ignored during import)</p><div class="legend" style="margin-bottom:16px"><div class="legend-item"><div class="legend-sw" style="background:#e3f2fd;border-color:#90caf9"></div> Required *</div><div class="legend-item"><div class="legend-sw" style="background:#f5f5f5"></div> Optional</div><div class="legend-item"><div class="legend-sw" style="background:#e0e0e0;border-color:#bdbdbd"></div> Locked</div></div><div class="tbl-wrap"><table class="col-ref" style="min-width:auto"><thead><tr><th>Col</th><th>Field</th><th>Required</th><th>Type</th><th>Notes</th></tr></thead><tbody>'+trs+'</tbody></table></div><div style="padding:14px;border-radius:4px;background:#e8f4fd;border:1px solid #90caf9;font-size:12px;color:#0d47a1"><strong>Account-specific dropdowns:</strong> Location, Sublocation, Manufacturer, Refrigerant Type, and Acquired From are populated with values from the current account at time of template download.</div></div>';}},
-{id:"access-denied",label:"9. Access Denied",html:function(){return '<div class="access-denied"><div class="ad-card"><div class="ad-inner"><div class="ad-icon"><span style="font-size:48px;color:#d32f2f">&#9888;</span></div><p class="ad-title">Access Denied</p><p class="ad-sub">You do not have permission to access this page.</p><button class="ad-btn">Go Back</button></div><p class="ad-footer">If you believe you should have access to this page, please contact your System Administrator.</p></div></div>';}}
-];
-function stepper(cur){var steps=["Review File","Validate & Import","Complete"];var h='<div class="stepper">';for(var i=0;i<steps.length;i++){var done=i<cur,active=i===cur,future=!done&&!active;h+='<div class="step-group"><div class="step-circle '+(future?"step-future":"step-active")+'">'+(done?"&#10003;":(i+1))+'</div><span class="step-label '+(future?"step-label-future":"step-label-active")+'">'+steps[i]+'</span></div>';if(i<steps.length-1)h+='<div class="step-line"></div>';}h+='</div>';return h;}
-function overlay(body,actions){return '<div class="overlay"><div class="overlay-bg"></div><div class="modal"><div class="modal-title">Bulk Import Systems</div><div class="modal-body">'+body+'</div>'+(actions?'<div class="modal-actions">'+actions+'</div>':'')+'</div></div>';}
-function summaryBar(ok,fail,total){return '<div class="summary"><div class="summary-tile" style="background:#f9f9f9"><div class="num" style="color:rgba(26,23,59,0.87)">'+total+'</div><div class="lbl" style="color:rgba(26,23,59,0.87)">Total</div></div><div class="summary-tile" style="background:#edf7ed"><div class="num" style="color:#2e7d32">'+ok+'</div><div class="lbl" style="color:#2e7d32">Imported</div></div><div class="summary-tile" style="background:#fdeded"><div class="num" style="color:#d32f2f">'+fail+'</div><div class="lbl" style="color:#d32f2f">Failed</div></div></div>';}
-function postNote(type){return '<div class="post-note">&#11015; Post-upload file downloaded: <strong>'+type+'PostUpload-20260303-143022.xlsx</strong></div>';}
-var tabsEl=document.getElementById("tabs");
-var viewsEl=document.getElementById("views");
-views.forEach(function(v,i){
-  var btn=document.createElement("button");
-  btn.className="tab"+(i===0?" active":"");
-  btn.textContent=v.label;
-  btn.onclick=function(){
-    document.querySelectorAll(".tab").forEach(function(t){t.classList.remove("active");});
-    btn.classList.add("active");
-    document.querySelectorAll(".view").forEach(function(el){el.classList.remove("active");});
-    document.getElementById("view-"+v.id).classList.add("active");
+  // ---------- Data ----------
+  const REG_COLORS = {
+    epa608: '#00897B',
+    aim: '#388E3C',
+    carb: '#F57C00',
+    wa: '#1976D2',
+    nj: '#C2185B',
+    ny: '#7B1FA2',
   };
-  tabsEl.appendChild(btn);
-  var div=document.createElement("div");
-  div.id="view-"+v.id;
-  div.className="view"+(i===0?" active":"");
-  div.innerHTML=v.html();
-  viewsEl.appendChild(div);
-});
+
+  const REGULATIONS = {
+    epa608: {
+      title: 'EPA Section 608', scope: 'federal', scopeLabel: 'Federal',
+      citation: '40 CFR Part 82, Subpart F (esp. § 82.157)',
+      count: 1246, facilities: 47,
+      floor: 'Appliances ≥50 lb of Class I/II refrigerant',
+      health: { healthy: 1059, nearing: 149, redFlag: 38 },
+      surfaces: {
+        inspection: { active: true, count: 34, sev: { '30': 22, '90': 9, '365': 3 } },
+        repair: { active: true, count: 11, note: '30-day clock from leak rate exceedance' },
+        ald: { active: true, count: 41, note: 'ALDs with last calibration > 365 days or missing' },
+        trigger: { active: true, count: 27, note: 'Trailing 365 days · 20% CR / 30% IPR / 10% comfort' },
+        chronic: { active: true, count: 6, projection: '+9 projected to cross 125% by year-end' },
+      },
+    },
+    aim: {
+      title: 'EPA AIM Act', scope: 'federal', scopeLabel: 'Federal',
+      citation: '40 CFR Part 84, Subpart B (esp. § 84.106) — Effective Jan 1, 2026',
+      count: 589, facilities: 23,
+      floor: '≥15 lb of regulated substance or substitute with GWP >53',
+      health: { healthy: 459, nearing: 106, redFlag: 24 },
+      surfaces: {
+        inspection: { active: true, count: 12, sev: { '30': 8, '90': 3, '365': 1 } },
+        repair: { active: true, count: 4, note: '30-day clock from leak rate exceedance' },
+        ald: { active: true, count: 23, note: 'ALDs with last calibration > 365 days or missing' },
+        trigger: { active: true, count: 18, note: 'Trailing 365 days · 20% CR / 30% IPR / 10% comfort' },
+        chronic: { active: true, count: 2, projection: '+5 projected to cross 125% by year-end' },
+      },
+      dataIntegrity: { count: 14, note: '8 missing prior inspection, 4 missing calibration dates, 2 carry test-data markers (excluded from surface counts above).' },
+    },
+    carb: {
+      title: 'CA CARB RMP', scope: 'state', scopeLabel: 'State (CA)',
+      citation: '17 CCR §§ 95380–95398',
+      count: 153, facilities: 12,
+      floor: 'Stationary non-residential refrigeration ≥50 lb high-GWP',
+      health: { healthy: 122, nearing: 26, redFlag: 5 },
+      surfaces: {
+        inspection: { active: true, count: 8, sev: { '30': 5, '90': 2, '365': 1 } },
+        repair: { active: true, count: 3, note: '14-day clock from any detected leak' },
+        ald: { active: true, count: 6, note: 'ALDs with last calibration > 365 days or missing' },
+        trigger: { active: false, reason: 'CARB requires repair within 14 days of any detected leak regardless of rate.' },
+        chronic: { active: false, reason: 'Federal-only surface.' },
+      },
+    },
+    wa: {
+      title: 'WA Ecology', scope: 'state', scopeLabel: 'State (WA)',
+      citation: 'Ch. 173-443 WAC',
+      count: 36, facilities: 4,
+      floor: 'Refrigeration/AC ≥50 lb using refrigerant with GWP ≥150',
+      health: { healthy: 27, nearing: 8, redFlag: 1 },
+      surfaces: {
+        inspection: { active: true, count: 3, sev: { '30': 2, '90': 1, '365': 0 } },
+        repair: { active: true, count: 1, note: '14-day clock from any detected leak' },
+        ald: { active: true, count: 2, note: 'ALDs with last calibration > 365 days or missing' },
+        trigger: { active: true, count: 4, note: 'Trailing 365 days · 16% retail food / 24% IPR / 8% AC' },
+        chronic: { active: false, reason: 'Federal-only surface.' },
+      },
+    },
+    nj: {
+      title: 'NJ DEP', scope: 'state', scopeLabel: 'State (NJ)',
+      citation: 'N.J.A.C. 7:27E — Refrigerant systems registration and reporting',
+      count: 33, facilities: 6,
+      floor: '≥50 lb high-GWP refrigerant',
+      health: { healthy: 33, nearing: 0, redFlag: 0 },
+      isEmpty: true,
+      surfaces: {
+        inspection: { active: false, reason: 'Not defined under NJ DEP.' },
+        repair: { active: false, reason: 'Not defined under NJ DEP.' },
+        ald: { active: false, reason: 'Not defined under NJ DEP.' },
+        trigger: { active: false, reason: 'Not defined under NJ DEP.' },
+        chronic: { active: false, reason: 'Federal-only surface.' },
+      },
+    },
+    ny: {
+      title: 'NY DEC Part 494', scope: 'state', scopeLabel: 'State (NY)',
+      citation: '6 NYCRR Part 494, Subpart 494-2',
+      count: 5, facilities: 2,
+      floor: 'Commercial stationary refrigeration/AC ≥50 lb',
+      health: { healthy: 4, nearing: 0, redFlag: 1 },
+      surfaces: {
+        inspection: { active: true, count: 1, sev: { '30': 1, '90': 0, '365': 0 } },
+        repair: { active: true, count: 0, note: '14-day clock from any detected leak' },
+        ald: { active: true, count: 1, note: 'Required for Large refrigeration by 6/1/2025' },
+        trigger: { active: false, reason: 'Leak rate is calculated for reporting but does not gate repair.' },
+        chronic: { active: false, reason: 'Federal-only surface.' },
+      },
+    },
+  };
+
+  const REG_ORDER = ['epa608', 'aim', 'carb', 'wa', 'nj', 'ny'];
+
+  const ASSET_ROWS = [
+    { name: 'TRTU — cc v4 beta admin', location: 'Tootsies Orchid Lounge', type: 'Comfort Cooling', refrigerant: 'R-410A', charge: '50.0 lb', obligation: 'Repair deadline', surface: 'repair', pill: 'red', pillText: '3 days past 30-day clock', evidence: 'Service Event #2216004' },
+    { name: 'Walk-in Cooler 5B', location: 'Mountain View Distribution', type: 'Refrigeration', refrigerant: 'R-404A', charge: '180.0 lb', obligation: 'Repair deadline', surface: 'repair', pill: 'red', pillText: '7 days past 30-day clock', evidence: 'Service Event #2218112' },
+    { name: 'Process Chiller A2', location: 'Pacific Northwest Hub', type: 'Process Cooling', refrigerant: 'R-134a', charge: '600.0 lb', obligation: 'Repair deadline', surface: 'repair', pill: 'red', pillText: '12 days past 30-day clock', evidence: 'Service Event #2218234' },
+    { name: 'Rooftop Unit 12', location: '#1000 Commercial Tower', type: 'Air-Conditioning', refrigerant: 'R-410A', charge: '80.0 lb', obligation: 'Repair deadline', surface: 'repair', pill: 'orange', pillText: '1 day past 30-day clock', evidence: 'Service Event #2219501' },
+    { name: 'Compressor Rack 7', location: 'Newark Distribution Center', type: 'Refrigeration', refrigerant: 'R-448A', charge: '320.0 lb', obligation: 'Repair deadline', surface: 'repair', pill: 'red', pillText: '4 days past 30-day clock', evidence: 'Service Event #2220103' },
+    { name: 'Condenser Unit B', location: 'Edison Logistics Hub', type: 'Comfort Cooling', refrigerant: 'R-407C', charge: '240.0 lb', obligation: 'Repair deadline', surface: 'repair', pill: 'red', pillText: '9 days past 30-day clock', evidence: 'Service Event #2220887' },
+    { name: 'Chiller 03', location: '#1000 Commercial Tower', type: 'Comfort Cooling', refrigerant: 'R-22', charge: '400.0 lb', obligation: 'Inspection due', surface: 'inspection', pill: 'orange', pillText: '32 days overdue', evidence: 'Last Inspection #2138070' },
+    { name: 'Main AC 1', location: '#1000 Commercial Tower', type: 'Comfort Cooling', refrigerant: 'R-22', charge: '150.0 lb', obligation: 'Inspection due', surface: 'inspection', pill: 'orange', pillText: '94 days overdue', evidence: 'Last Inspection #2214111' },
+    { name: 'RTU North', location: 'Tootsies Orchid Lounge', type: 'Air-Conditioning', refrigerant: 'R-410A', charge: '60.0 lb', obligation: 'Inspection due', surface: 'inspection', pill: 'orange', pillText: '45 days overdue', evidence: 'Last Inspection #2138422' },
+    { name: 'Chiller 02', location: 'Family Fare - Santa Monica', type: 'Chiller', refrigerant: 'R-22', charge: '320.0 lb', obligation: 'Inspection due', surface: 'inspection', pill: 'red', pillText: '180 days overdue', evidence: 'Last Inspection #2099012' },
+    { name: 'AC Penthouse', location: 'Trenton Cold Storage', type: 'Air-Conditioning', refrigerant: 'R-410A', charge: '80.0 lb', obligation: 'Inspection due', surface: 'inspection', pill: 'orange', pillText: '21 days overdue', evidence: 'Last Inspection #2204556' },
+    { name: 'Walk-in Freezer 3', location: 'Bryan Site Alpha', type: 'Refrigeration', refrigerant: 'R-404A', charge: '150.0 lb', obligation: 'Inspection due', surface: 'inspection', pill: 'red', pillText: '412 days overdue', evidence: 'Last Inspection #1987234' },
+    { name: 'AC 1 Circuit 5', location: 'WAC1', type: 'Comfort Cooling', refrigerant: 'R-410A', charge: '50.0 lb', obligation: 'Leak rate trigger', surface: 'trigger', pill: 'orange', pillText: '12% exceeded · 38 days ago', evidence: 'Trigger Event #2214109' },
+    { name: 'RDD 700', location: 'Family Fare - Santa Monica', type: 'Refrigeration', refrigerant: 'R-448A', charge: '220.0 lb', obligation: 'Leak rate trigger', surface: 'trigger', pill: 'orange', pillText: '22% exceeded · 12 days ago', evidence: 'Trigger Event #2221034' },
+    { name: 'Refrigeration Pack A', location: 'Newark Distribution Center', type: 'Refrigeration', refrigerant: 'R-404A', charge: '500.0 lb', obligation: 'Leak rate trigger', surface: 'trigger', pill: 'red', pillText: '35% exceeded · 5 days ago', evidence: 'Trigger Event #2221555' },
+    { name: 'Cold Room South', location: 'Pacific Northwest Hub', type: 'Refrigeration', refrigerant: 'R-407A', charge: '280.0 lb', obligation: 'Leak rate trigger', surface: 'trigger', pill: 'orange', pillText: '28% exceeded · 21 days ago', evidence: 'Trigger Event #2218990' },
+    { name: 'Process Cooler 4', location: 'Mountain View Distribution', type: 'Process Cooling', refrigerant: 'R-134a', charge: '350.0 lb', obligation: 'Leak rate trigger', surface: 'trigger', pill: 'orange', pillText: '18% exceeded · 67 days ago', evidence: 'Trigger Event #2210443' },
+    { name: 'Display Case Run B', location: 'Happy Flower Store', type: 'Refrigeration', refrigerant: 'R-22', charge: '90.0 lb', obligation: 'Leak rate trigger', surface: 'trigger', pill: 'orange', pillText: '14% exceeded · 90 days ago', evidence: 'Trigger Event #2208992' },
+    { name: 'RDD 500', location: '#1000 Commercial Tower', type: 'Refrigeration', refrigerant: 'R-448A', charge: '300.0 lb', obligation: 'ALD calibration', surface: 'ald', pill: 'red', pillText: '387 days since last calibration', evidence: 'Last Calibration #2138068' },
+    { name: 'Cold Storage ALD', location: 'Newark Distribution Center', type: 'Leak Monitoring Device', refrigerant: '—', charge: '—', obligation: 'ALD calibration', surface: 'ald', pill: 'red', pillText: '412 days since last calibration', evidence: 'Last Calibration #2098551' },
+    { name: 'Loading Dock ALD', location: 'Edison Logistics Hub', type: 'Leak Monitoring Device', refrigerant: '—', charge: '—', obligation: 'ALD calibration', surface: 'ald', pill: 'red', pillText: '365 days since last calibration', evidence: 'Last Calibration #2120098' },
+    { name: 'North Wing Detector', location: 'Trenton Cold Storage', type: 'Leak Monitoring Device', refrigerant: '—', charge: '—', obligation: 'ALD calibration', surface: 'ald', pill: 'red', pillText: '430 days since last calibration', evidence: 'Last Calibration #2088112' },
+    { name: 'Bryan Leak Monitoring Device', location: '#1000 Commercial Tower', type: 'Leak Monitoring Device', refrigerant: '—', charge: '—', obligation: 'ALD calibration', surface: 'ald', pill: 'no-prior', pillText: 'No prior inspection', evidence: 'Log first calibration →' },
+    { name: 'SWC2 ALD', location: 'Star Wars Cantina 2', type: 'Leak Monitoring Device', refrigerant: '—', charge: '—', obligation: 'ALD calibration', surface: 'ald', pill: 'missing', pillText: 'Service date missing', evidence: 'Resolve data issue →' },
+    { name: 'TEST RACK', location: 'Star Wars Cantina', type: 'Refrigeration', refrigerant: 'R-448A', charge: '400.0 lb', obligation: 'Chronically leaking', surface: 'chronic', pill: 'red', pillText: '132% of charge YTD', evidence: 'YTD Additions Log' },
+    { name: 'CH001', location: 'Tootsies Orchid Lounge', type: 'Chiller', refrigerant: 'R-134a', charge: '500.0 lb', obligation: 'Trending', surface: 'chronic', pill: 'grey', pillText: '98% YTD · projected 138%', evidence: 'YTD Projection' },
+    { name: 'Chiller Plant Main', location: 'Pacific Northwest Hub', type: 'Chiller', refrigerant: 'R-134a', charge: '800.0 lb', obligation: 'Chronically leaking', surface: 'chronic', pill: 'red', pillText: '145% of charge YTD', evidence: 'YTD Additions Log' },
+    { name: 'Multi-Pack Refrigeration', location: 'Family Fare - Santa Monica', type: 'Refrigeration', refrigerant: 'R-404A', charge: '650.0 lb', obligation: 'Chronically leaking', surface: 'chronic', pill: 'red', pillText: '128% of charge YTD', evidence: 'YTD Additions Log' },
+    { name: 'Refrigeration Loop B', location: 'Mountain View Distribution', type: 'Refrigeration', refrigerant: 'R-407A', charge: '420.0 lb', obligation: 'Trending', surface: 'chronic', pill: 'grey', pillText: '102% YTD · projected 142%', evidence: 'YTD Projection' },
+    { name: 'Distribution Rack', location: 'Bryan Site Alpha', type: 'Refrigeration', refrigerant: 'R-448A', charge: '380.0 lb', obligation: 'Chronically leaking', surface: 'chronic', pill: 'red', pillText: '156% of charge YTD', evidence: 'YTD Additions Log' },
+  ];
+
+  const SURFACE_KEYS = ['inspection', 'repair', 'ald', 'trigger', 'chronic'];
+  const SURFACE_LABELS = {
+    inspection: 'Assets Due for Inspection',
+    repair: 'Leak Repair Deadline Exceeded',
+    ald: 'ALD Calibration Missing',
+    trigger: 'Trigger Rate Exceeded',
+    chronic: 'Chronically Leaking Systems',
+  };
+
+  let currentReg = null;
+  let currentFilter = 'all';
+  let assetPage = 0;
+  let viewMode = 'separate'; // separate page mode
+  const PAGE_SIZE = 5;
+
+  function formatInspection(str) {
+    if (!str) return '';
+    const m = String(str).match(/#(\d+)/);
+    return m ? '#' + m[1] : str;
+  }
+
+  function toggleSidebar() {
+    document.getElementById('sidebar').classList.toggle('open');
+    document.getElementById('sidebarOverlay').classList.toggle('show');
+  }
+
+  // ---------- Render overview ----------
+  function renderOverview() {
+    const container = document.getElementById('regRows');
+    container.innerHTML = '';
+    REG_ORDER.forEach(regKey => {
+      const r = REGULATIONS[regKey];
+      const segHtml = (cls, count) => {
+        if (count === 0) return '';
+        return `<div class="v-segment ${cls}" style="flex-grow:${count};" title="${count}"><span class="seg-count">${count}</span></div>`;
+      };
+
+      const col = document.createElement('div');
+      col.className = 'reg-column';
+      col.setAttribute('data-reg', regKey);
+      col.style.setProperty('--reg-color', REG_COLORS[regKey]);
+      col.onclick = () => showDrill(regKey);
+      // Combine nearing + non-compliant into a single "Needs attention" segment
+      const attention = r.health.nearing + r.health.redFlag;
+      // Stack order top→bottom: needs attention, healthy
+      col.innerHTML = `
+        <div class="v-total">${r.count.toLocaleString()}</div>
+        <div class="v-bar-wrap">
+          <div class="v-bar">
+            ${segHtml('attention', attention)}
+            ${segHtml('healthy', r.health.healthy)}
+          </div>
+        </div>
+        <div class="v-label">
+          <div class="v-name">
+            <span>${r.title}</span>
+            <span class="material-icons v-chevron">chevron_right</span>
+          </div>
+          <div class="v-scope">${r.scopeLabel}</div>
+          <div class="v-see-detail">See Detail →</div>
+        </div>
+      `;
+      container.appendChild(col);
+    });
+  }
+
+  // ---------- Render drill-down ----------
+  function renderDrillDown(regKey) {
+    const r = REGULATIONS[regKey];
+    currentReg = regKey;
+    currentFilter = 'all';
+    assetPage = 0;
+
+    // Header
+    document.getElementById('dColorTag').className = 'reg-color-tag-large ' + regKey;
+    document.getElementById('dTitle').textContent = r.title;
+    const scopeBadge = document.getElementById('dScopeBadge');
+    scopeBadge.className = 'reg-scope-badge ' + r.scope;
+    scopeBadge.textContent = r.scopeLabel;
+    document.getElementById('dCitation').textContent = r.citation;
+    document.getElementById('dMeta').innerHTML = `
+      <div><strong>${r.count.toLocaleString()}</strong> assets in scope</div>
+      <div><strong>${r.facilities}</strong> facilities</div>
+      <div>Charge capacity: ${r.floor}</div>
+    `;
+
+    // Data integrity alert
+    document.getElementById('dDataIntegrity').innerHTML = '';
+
+    // Tiles
+    const tilesContainer = document.getElementById('dTiles');
+    tilesContainer.innerHTML = '';
+
+    // In-scope tile (selected by default)
+    const allTile = document.createElement('div');
+    allTile.className = 'tile selected';
+    allTile.onclick = () => handleTileClick('all', allTile);
+    allTile.innerHTML = `
+      <div class="tile-title">In-scope Assets</div>
+      <div class="tile-count">${r.count.toLocaleString()}</div>
+      <div class="tile-footnote">All assets subject to ${r.title}</div>
+    `;
+    tilesContainer.appendChild(allTile);
+
+    SURFACE_KEYS.forEach(key => {
+      const surf = r.surfaces[key];
+      if (!surf.active) return; // skip blank/disabled tiles
+      const tile = document.createElement('div');
+      tile.className = 'tile';
+      tile.onclick = () => handleTileClick(key, tile);
+      let inner = `
+        <div class="tile-title">${SURFACE_LABELS[key]}</div>
+        <div class="tile-count">${surf.count}</div>
+      `;
+      if (surf.sev) {
+        inner += `
+          <div class="severity-row">
+            <span class="severity-badge sev-30">30+: ${surf.sev['30']}</span>
+            <span class="severity-badge sev-90">90+: ${surf.sev['90']}</span>
+            <span class="severity-badge sev-365">365+: ${surf.sev['365']}</span>
+          </div>
+        `;
+      } else if (surf.note) {
+        inner += `<div class="tile-footnote">${surf.note}</div>`;
+      }
+      if (surf.projection) {
+        inner += `<div class="tile-footnote warn">${surf.projection}</div>`;
+      }
+      tile.innerHTML = inner;
+      tilesContainer.appendChild(tile);
+    });
+
+    // Content area
+    if (r.isEmpty) {
+      renderNjContent();
+    } else {
+      renderAssetTable();
+    }
+  }
+
+  function handleTileClick(key, tileEl) {
+    if (key === 'all') {
+      currentFilter = 'all';
+    } else if (currentFilter === key) {
+      currentFilter = 'all';
+    } else {
+      currentFilter = key;
+    }
+    assetPage = 0;
+    const tiles = document.querySelectorAll('#dTiles .tile');
+    tiles.forEach(t => t.classList.remove('selected'));
+    if (currentFilter === 'all') {
+      if (tiles[0]) tiles[0].classList.add('selected');
+    } else {
+      tileEl.classList.add('selected');
+    }
+    renderAssetTable();
+  }
+
+  function renderAssetTable() {
+    const r = REGULATIONS[currentReg];
+    const allRows = currentFilter === 'all' ? ASSET_ROWS : ASSET_ROWS.filter(row => row.surface === currentFilter);
+    const tileCount = currentFilter === 'all' ? r.count : (r.surfaces[currentFilter] && r.surfaces[currentFilter].count) || 0;
+    const sub = currentFilter === 'all'
+      ? `${tileCount.toLocaleString()} assets · click a tile above to filter by obligation`
+      : `Showing ${allRows.length} of ${tileCount.toLocaleString()} assets (sample data)`;
+
+    // Paginate
+    const totalPages = Math.max(1, Math.ceil(allRows.length / PAGE_SIZE));
+    if (assetPage >= totalPages) assetPage = 0;
+    const startIdx = assetPage * PAGE_SIZE;
+    const endIdx = Math.min(startIdx + PAGE_SIZE, allRows.length);
+    const rows = allRows.slice(startIdx, endIdx);
+
+    const headers = ['Asset Name','Location','Equipment Type','Refrigerant','Charge','Obligation','Most Recent Inspection'];
+    const headHtml = headers.map(h => `
+      <th><div class="th-content"><span>${h}</span><span class="material-icons th-kebab">more_vert</span></div></th>
+    `).join('');
+
+    const rowsHtml = rows.length === 0
+      ? `<tr><td colspan="${headers.length}" style="text-align:center;padding:32px;color:var(--text-secondary);font-style:italic;">No assets in this category in the sample data.</td></tr>`
+      : rows.map(row => `
+        <tr>
+          <td><a>${row.name}</a></td>
+          <td><a>${row.location}</a></td>
+          <td>${row.type}</td>
+          <td>${row.refrigerant}</td>
+          <td>${row.charge}</td>
+          <td>${row.obligation}</td>
+          <td><a>${formatInspection(row.evidence)}</a></td>
+        </tr>
+      `).join('');
+
+    document.getElementById('dContent').innerHTML = `
+      <div class="table-section" style="margin-top:24px;">
+        <div class="section-title">In-scope Assets</div>
+        <div class="section-sub">${sub}</div>
+        <div class="table-controls">
+          <div class="table-control"><span class="material-icons">view_column</span>Columns</div>
+          <div class="table-control"><span class="material-icons">filter_list</span>Filters</div>
+          <div class="table-control"><span class="material-icons">file_upload</span>Export</div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>${headHtml}</tr></thead>
+            <tbody>${rowsHtml}</tbody>
+          </table>
+          ${renderFooter(startIdx + 1, endIdx, allRows.length, 'asset')}
+        </div>
+      </div>
+    `;
+  }
+
+  function renderFooter(start, end, total, tableId) {
+    const pageState = tableId === 'asset' ? assetPage : (tableId === 'cross' ? crossPage : 0);
+    const totalPages = Math.ceil(total / PAGE_SIZE);
+    const disablePrev = pageState === 0;
+    const disableNext = pageState >= totalPages - 1 || (tableId !== 'asset' && tableId !== 'cross');
+    const isInteractive = tableId === 'asset' || tableId === 'cross';
+    return `
+      <div class="table-footer">
+        <div class="footer-rows">
+          <span>Rows per page:</span>
+          <span class="footer-rows-select">${PAGE_SIZE} <span class="material-icons">arrow_drop_down</span></span>
+        </div>
+        <div>${total === 0 ? '0-0' : start + '-' + end} of ${total}</div>
+        <div class="footer-nav">
+          <button class="footer-nav-btn" ${disablePrev ? 'disabled' : ''} ${isInteractive ? `onclick="changePage('${tableId}', -1)"` : ''}><span class="material-icons">chevron_left</span></button>
+          <button class="footer-nav-btn" ${disableNext ? 'disabled' : ''} ${isInteractive ? `onclick="changePage('${tableId}', 1)"` : ''}><span class="material-icons">chevron_right</span></button>
+        </div>
+      </div>
+    `;
+  }
+
+  function changePage(tableId, delta) {
+    if (tableId === 'asset') {
+      assetPage += delta;
+      renderAssetTable();
+    } else if (tableId === 'cross') {
+      crossPage += delta;
+      renderCrossContent();
+    }
+  }
+
+  function renderNjContent() {
+    const njAssetHeaders = ['Asset Name','Location','Equipment Type','Refrigerant','Charge','Also In Scope Of'];
+    const thHtml = (headers) => headers.map(h => `
+      <th><div class="th-content"><span>${h}</span><span class="material-icons th-kebab">more_vert</span></div></th>
+    `).join('');
+
+    const njAssets = [
+      { name: 'Cold Room A', loc: 'Newark Distribution Center', type: 'Refrigeration', refrig: 'R-404A', charge: '180.0 lb', scope: 'EPA 608, EPA AIM Act' },
+      { name: 'Rack 2 East', loc: 'Trenton Cold Storage', type: 'Refrigeration', refrig: 'R-407A', charge: '240.0 lb', scope: 'EPA 608, EPA AIM Act' },
+      { name: 'AC Penthouse', loc: 'Edison Logistics Hub', type: 'Air-Conditioning', refrig: 'R-410A', charge: '80.0 lb', scope: 'EPA AIM Act' },
+      { name: 'Walk-in Freezer 1', loc: 'Newark Distribution Center', type: 'Refrigeration', refrig: 'R-448A', charge: '200.0 lb', scope: 'EPA 608, EPA AIM Act' },
+      { name: 'Process Cooler North', loc: 'Trenton Cold Storage', type: 'Process Cooling', refrig: 'R-134a', charge: '320.0 lb', scope: 'EPA 608, EPA AIM Act' },
+      { name: 'Display Case Run A', loc: 'Edison Logistics Hub', type: 'Refrigeration', refrig: 'R-404A', charge: '150.0 lb', scope: 'EPA 608, EPA AIM Act' },
+    ];
+
+    document.getElementById('dContent').innerHTML = `
+      <div class="table-section" style="margin-top:24px;">
+        <div class="section-title">In-scope Assets</div>
+        <div class="section-sub">33 assets · stationary refrigeration / AC ≥50 lb high-GWP</div>
+        <div class="table-controls">
+          <div class="table-control"><span class="material-icons">view_column</span>Columns</div>
+          <div class="table-control"><span class="material-icons">filter_list</span>Filters</div>
+          <div class="table-control"><span class="material-icons">file_upload</span>Export</div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>${thHtml(njAssetHeaders)}</tr></thead>
+            <tbody>
+              ${njAssets.map(row => `
+                <tr>
+                  <td><a>${row.name}</a></td>
+                  <td><a>${row.loc}</a></td>
+                  <td>${row.type}</td>
+                  <td>${row.refrig}</td>
+                  <td>${row.charge}</td>
+                  <td>${row.scope}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+          ${renderFooter(1, njAssets.length, 33, 'nj-asset')}
+        </div>
+      </div>
+    `;
+  }
+
+  function showDrill(regKey) {
+    if (currentReg === regKey && viewMode === 'inline') {
+      hideDrill();
+      return;
+    }
+    renderDrillDown(regKey);
+    document.querySelectorAll('.reg-column').forEach(r => r.classList.remove('selected'));
+    const selectedRow = document.querySelector(`.reg-column[data-reg="${regKey}"]`);
+    if (selectedRow) selectedRow.classList.add('selected');
+
+    document.getElementById('drilldown').style.display = 'block';
+
+    if (viewMode === 'separate') {
+      // Hide chart, cross-reg section, and the Compliance Center page header
+      document.getElementById('chartCard').style.display = 'none';
+      document.getElementById('crossRegSection').style.display = 'none';
+      document.getElementById('pageTitle').style.display = 'none';
+      const crumb = document.getElementById('pageCrumb');
+      crumb.classList.add('back-mode');
+      crumb.innerHTML = '<span class="material-icons">arrow_back</span>Back to Compliance Center';
+      crumb.onclick = hideDrill;
+      window.scrollTo({ top: 0, behavior: 'instant' });
+    } else {
+      // Inline: scroll to drill-down
+      const crumb = document.getElementById('pageCrumb');
+      crumb.classList.remove('back-mode');
+      crumb.textContent = 'Compliance Center';
+      crumb.onclick = null;
+      setTimeout(() => {
+        document.getElementById('drilldown').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 50);
+    }
+  }
+
+  function hideDrill() {
+    currentReg = null;
+    document.getElementById('drilldown').style.display = 'none';
+    document.querySelectorAll('.reg-column').forEach(r => r.classList.remove('selected'));
+
+    // Reset breadcrumb
+    const crumb = document.getElementById('pageCrumb');
+    crumb.classList.remove('back-mode');
+    crumb.textContent = 'Compliance Center';
+    crumb.onclick = null;
+
+    if (viewMode === 'separate') {
+      document.getElementById('chartCard').style.display = '';
+      document.getElementById('crossRegSection').style.display = '';
+      document.getElementById('pageTitle').style.display = '';
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // ---------- Cross-regulation tables (3 tabs at bottom) ----------
+  const CROSS_TABS = [
+    { key: 'inspection', label: 'Assets Due for Inspection' },
+    { key: 'repair', label: 'Under Repair Systems' },
+    { key: 'chronic', label: 'Chronically Leaking Systems' },
+  ];
+  let crossTabActive = 'inspection';
+  let crossPage = 0;
+
+  function getCrossRowsForSurface(surfaceKey) {
+    const REG_MAP = {
+      inspection: ['EPA 608', 'EPA AIM Act'],
+      repair: ['EPA 608', 'EPA AIM Act', 'CA CARB'],
+      chronic: ['EPA 608', 'EPA AIM Act'],
+    };
+    const rows = ASSET_ROWS.filter(row => row.surface === surfaceKey);
+    return rows.map(row => ({ ...row, applicableRegs: REG_MAP[surfaceKey] }));
+  }
+
+  function renderCrossTabs() {
+    const container = document.getElementById('crossTabs');
+    container.innerHTML = '';
+    CROSS_TABS.forEach(tab => {
+      const btn = document.createElement('button');
+      btn.className = 'tab-item' + (crossTabActive === tab.key ? ' active' : '');
+      btn.textContent = tab.label;
+      btn.onclick = () => {
+        crossTabActive = tab.key;
+        crossPage = 0;
+        renderCrossTabs();
+        renderCrossContent();
+      };
+      container.appendChild(btn);
+    });
+  }
+
+  function renderCrossContent() {
+    const allRows = getCrossRowsForSurface(crossTabActive);
+    const totalPages = Math.max(1, Math.ceil(allRows.length / PAGE_SIZE));
+    if (crossPage >= totalPages) crossPage = 0;
+    const startIdx = crossPage * PAGE_SIZE;
+    const endIdx = Math.min(startIdx + PAGE_SIZE, allRows.length);
+    const rows = allRows.slice(startIdx, endIdx);
+
+    const headers = ['Asset Name','Location','Equipment Type','Refrigerant','Charge','Applicable Regulations','Most Recent Inspection'];
+    const headHtml = headers.map(h => `
+      <th><div class="th-content"><span>${h}</span><span class="material-icons th-kebab">more_vert</span></div></th>
+    `).join('');
+
+    const rowsHtml = rows.map(row => `
+      <tr>
+        <td><a>${row.name}</a></td>
+        <td><a>${row.location}</a></td>
+        <td>${row.type}</td>
+        <td>${row.refrigerant}</td>
+        <td>${row.charge}</td>
+        <td style="font-size:13px;color:var(--text-secondary);">${row.applicableRegs.join(', ')}</td>
+        <td><a>${formatInspection(row.evidence)}</a></td>
+      </tr>
+    `).join('');
+
+    document.getElementById('crossContent').innerHTML = `
+      <div class="table-controls">
+        <div class="table-control"><span class="material-icons">view_column</span>Columns</div>
+        <div class="table-control"><span class="material-icons">filter_list</span>Filters</div>
+        <div class="table-control"><span class="material-icons">file_upload</span>Export</div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>${headHtml}</tr></thead>
+          <tbody>${rowsHtml}</tbody>
+        </table>
+        ${renderFooter(startIdx + 1, endIdx, allRows.length, 'cross')}
+      </div>
+    `;
+  }
+
+  // Init
+  renderOverview();
+  renderCrossTabs();
+  renderCrossContent();
 </script>
+
 </body>
 </html>
