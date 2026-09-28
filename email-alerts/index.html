@@ -1,0 +1,3290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trakref — Email Alerts (Rail)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: 'Open Sans', 'Segoe UI', sans-serif; background: #FAFAFA; }
+  .msym {
+    font-family: 'Material Symbols Outlined';
+    font-weight: normal;
+    font-style: normal;
+    line-height: 1;
+    letter-spacing: normal;
+    text-transform: none;
+    display: inline-block;
+    white-space: nowrap;
+    word-wrap: normal;
+    direction: ltr;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    -moz-osx-font-smoothing: grayscale;
+  }
+</style>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7/babel.min.js"></script>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" data-presets="react">
+const { useState, useMemo, useRef, useEffect, useCallback } = React;
+
+// Trakref Email Alerts (Rail)
+// Manage Email Alerts with the Analytics-style regulation rail: a page-level,
+// searchable, collapsible column beside the app sidebar. Extracted from the
+// multi-variant prototype — no variant switching, no scaffolding panel.
+// One row per alert; the notification band is a setting inside the subscription.
+
+// ---------- Icons: Material Symbols Outlined (Google Fonts), matching MUI's icon set ----------
+function MIcon({ name, size = 24, color, style, strokeWidth, weight }) {
+  return (
+    <span
+      className="msym"
+      aria-hidden="true"
+      style={{
+        fontSize: size,
+        color,
+        fontVariationSettings: `'FILL' 0, 'wght' ${weight || (strokeWidth >= 2.5 ? 600 : 400)}, 'GRAD' 0, 'opsz' ${size <= 20 ? 20 : 24}`,
+        ...style,
+      }}
+    >
+      {name}
+    </span>
+  );
+}
+const AlertTriangle = (p) => <MIcon name="warning" {...p} />;
+const BarChart3 = (p) => <MIcon name="bar_chart" {...p} />;
+const Bell = (p) => <MIcon name="notifications" {...p} />;
+const Check = (p) => <MIcon name="check" {...p} />;
+const CheckCircle2 = (p) => <MIcon name="check_circle" {...p} />;
+const ChevronDown = (p) => <MIcon name="expand_more" {...p} />;
+const ChevronRight = (p) => <MIcon name="chevron_right" {...p} />;
+const ClipboardCheck = (p) => <MIcon name="check_box" {...p} />;
+const ClipboardList = (p) => <MIcon name="fact_check" {...p} />;
+const FileBarChart = (p) => <MIcon name="list_alt" {...p} />;
+const FileText = (p) => <MIcon name="description" {...p} />;
+const Gauge = (p) => <MIcon name="speed" {...p} />;
+const Gift = (p) => <MIcon name="redeem" {...p} />;
+const HelpCircle = (p) => <MIcon name="help" {...p} />;
+const Home = (p) => <MIcon name="home" {...p} />;
+const Info = (p) => <MIcon name="info" {...p} />;
+const Lightbulb = (p) => <MIcon name="lightbulb" {...p} />;
+const ListChecks = (p) => <MIcon name="checklist" {...p} />;
+const Mail = (p) => <MIcon name="mail" {...p} />;
+const MessageSquare = (p) => <MIcon name="chat" {...p} />;
+const MapPin = (p) => <MIcon name="location_on" {...p} />;
+const MoreVertical = (p) => <MIcon name="more_vert" {...p} />;
+const Pause = (p) => <MIcon name="pause" {...p} />;
+const Pencil = (p) => <MIcon name="edit" {...p} />;
+const PieChart = (p) => <MIcon name="pie_chart" {...p} />;
+const Play = (p) => <MIcon name="play_arrow" {...p} />;
+const Plus = (p) => <MIcon name="add" {...p} />;
+const Search = (p) => <MIcon name="search" {...p} />;
+const Trash2 = (p) => <MIcon name="delete" {...p} />;
+const X = (p) => <MIcon name="close" {...p} />;
+
+/**
+ * Tokens pulled from Figma: Trakref Design System MUI v6.1.0 [WIP]
+ * fileKey jCKh1bzHeEiCOoMzfcKs0a — palette + material/colors collections, Light mode.
+ */
+const T = {
+  // palette/primary — Trakref Primary Default (this is the CTA colour)
+  primaryMain: "#00859B",
+  primaryDark: "#005F6F",
+  primaryLight: "#90CAF9",
+  primaryContrast: "#FFFFFF",
+  primaryHover: "rgba(0,133,155,0.04)",
+  primarySelected: "rgba(0,133,155,0.08)",
+  primaryFocus: "rgba(0,133,155,0.12)",
+  primaryOutlinedBorder: "rgba(0,133,155,0.50)",
+  // Trakref Colors (Others)
+  primary800: "#005F6F",
+  primary1000: "#004652",
+  // palette/secondary
+  secondaryMain: "#00B0B9",
+  secondaryDark: "#00939A",
+  secondaryLight: "#78C3C7",
+  // palette/text — base #1A173B with MUI alphas
+  textPrimary: "rgba(26,23,59,0.87)",
+  textSecondary: "rgba(26,23,59,0.60)",
+  textDisabled: "rgba(26,23,59,0.38)",
+  bodyText: "#1A173B",
+  trGrey1: "#44474A",
+  trGrey2: "#6D7588",
+  // palette/action
+  actionHover: "rgba(26,23,59,0.04)",
+  actionSelected: "rgba(26,23,59,0.08)",
+  actionDisabled: "rgba(26,23,59,0.38)",
+  actionDisabledBg: "rgba(26,23,59,0.12)",
+  // semantic
+  errorMain: "#D32F2F",
+  warningMain: "#EF6C00",
+  infoMain: "#0288D1",
+  successMain: "#2E7D32",
+  // _components/alert
+  alertErrorColor: "#5F2120",
+  alertErrorBg: "#FDEDED",
+  alertWarningColor: "#663C00",
+  alertWarningBg: "#FFF4E5",
+  alertInfoColor: "#014361",
+  alertInfoBg: "#E5F6FD",
+  alertSuccessColor: "#1E4620",
+  alertSuccessBg: "#EDF7ED",
+  // structure
+  divider: "rgba(0,0,0,0.12)",
+  outlined: "#E0E0E0",
+  bgDefault: "#FFFFFF",
+  grey50: "#FAFAFA",
+  grey100: "#F5F5F5",
+  grey200: "#EEEEEE",
+  grey400: "#BDBDBD",
+  snackbarFill: "#323232",
+  white: "#FFFFFF",
+};
+
+// typography/* text styles from the same library
+const FONT = "'Open Sans', 'Segoe UI', sans-serif";
+const TYPE = {
+  h5: { fontFamily: FONT, fontSize: 24, fontWeight: 400, lineHeight: 1.334, letterSpacing: 0 },
+  h6: { fontFamily: FONT, fontSize: 20, fontWeight: 700, lineHeight: 1.6, letterSpacing: 0.15 },
+  subtitle2: { fontFamily: FONT, fontSize: 14, fontWeight: 400, lineHeight: 1.57, letterSpacing: 0.1 },
+  body1: { fontFamily: FONT, fontSize: 16, fontWeight: 400, lineHeight: 1.5, letterSpacing: 0.15 },
+  body2: { fontFamily: FONT, fontSize: 14, fontWeight: 400, lineHeight: 1.43, letterSpacing: 0.17 },
+  caption: { fontFamily: FONT, fontSize: 12, fontWeight: 400, lineHeight: 1.66, letterSpacing: 0.4 },
+  overline: { fontFamily: FONT, fontSize: 12, fontWeight: 400, lineHeight: 2.66, letterSpacing: 1, textTransform: "uppercase" },
+  buttonMedium: { fontFamily: FONT, fontSize: 14, fontWeight: 500, lineHeight: "24px", letterSpacing: 0.4, textTransform: "uppercase" },
+  buttonSmall: { fontFamily: FONT, fontSize: 13, fontWeight: 400, lineHeight: "22px", letterSpacing: 0.46, textTransform: "uppercase" },
+  chipLabel: { fontFamily: FONT, fontSize: 13, fontWeight: 400, lineHeight: "18px", letterSpacing: 0.16 },
+  inputValue: { fontFamily: FONT, fontSize: 16, fontWeight: 400, lineHeight: "24px", letterSpacing: 0.15 },
+  inputLabel: { fontFamily: FONT, fontSize: 12, fontWeight: 400, lineHeight: "12px", letterSpacing: 0.15 },
+  tableHeader: { fontFamily: FONT, fontSize: 13, fontWeight: 600, lineHeight: "24px", letterSpacing: 0.5, textTransform: "uppercase" },
+  menuItemDense: { fontFamily: FONT, fontSize: 14, fontWeight: 400, lineHeight: "24px", letterSpacing: 0.17 },
+  badgeLabel: { fontFamily: FONT, fontSize: 12, fontWeight: 400, lineHeight: "20px", letterSpacing: 0.14 },
+};
+
+// MUI elevation shadows
+const SHADOW = {
+  e2: "0px 3px 1px -2px rgba(0,0,0,0.2), 0px 2px 2px 0px rgba(0,0,0,0.14), 0px 1px 5px 0px rgba(0,0,0,0.12)",
+  e6: "0px 3px 5px -1px rgba(0,0,0,0.2), 0px 6px 10px 0px rgba(0,0,0,0.14), 0px 1px 18px 0px rgba(0,0,0,0.12)",
+  e8: "0px 5px 5px -3px rgba(0,0,0,0.2), 0px 8px 10px 1px rgba(0,0,0,0.14), 0px 3px 14px 2px rgba(0,0,0,0.12)",
+  e16: "0px 8px 10px -5px rgba(0,0,0,0.2), 0px 16px 24px 2px rgba(0,0,0,0.14), 0px 6px 30px 5px rgba(0,0,0,0.12)",
+};
+
+// ---------- Catalog ----------
+
+const REGULATIONS = [
+  { id: "EPA 608", scope: "Federal", hasAssets: true },
+  { id: "EPA AIM Act", scope: "Federal", hasAssets: true },
+  { id: "CA CARB", scope: "California", hasAssets: true },
+  { id: "WA Ecology", scope: "Washington", hasAssets: true },
+  { id: "NY DEC", scope: "New York", hasAssets: false },
+];
+
+const CATEGORIES = ["Inspection", "Leak Rate", "Repair", "Leak Detection (ALD)"];
+
+
+const CATALOG = [
+  { id: "epa608-q-insp", reg: "EPA 608", cat: "Inspection", cadence: "Quarterly", base: "EPA 608 Quarterly Inspection", bands: ["Approaching", "Due"] },
+  { id: "epa608-a-insp", reg: "EPA 608", cat: "Inspection", cadence: "Annual", base: "EPA 608 Annual Inspection", bands: ["Approaching", "Due"] },
+  { id: "epa608-leak", reg: "EPA 608", cat: "Leak Rate", threshold: "20%", base: "EPA 608 Leak Rate", bands: ["Approaching", "Exceeded", "Chronically Leaking"] },
+  { id: "epa608-repair", reg: "EPA 608", cat: "Repair", cadence: "30-day", base: "EPA 608 30-Day Repair Deadline", bands: ["Approaching", "Exceeded"] },
+  { id: "epa608-ald", reg: "EPA 608", cat: "Leak Detection (ALD)", base: "EPA 608 ALD Calibration", bands: ["Calibration Approaching", "Calibration Overdue"] },
+  { id: "aim-a-insp", reg: "EPA AIM Act", cat: "Inspection", cadence: "Annual", base: "EPA AIM Act Annual Inspection", bands: ["Approaching", "Due"] },
+  { id: "aim-leak", reg: "EPA AIM Act", cat: "Leak Rate", threshold: "20%", base: "EPA AIM Act Leak Rate", bands: ["Approaching", "Exceeded", "Chronically Leaking"] },
+  { id: "aim-repair", reg: "EPA AIM Act", cat: "Repair", cadence: "30-day", base: "EPA AIM Act 30-Day Repair Deadline", bands: ["Approaching", "Exceeded"] },
+  { id: "aim-ald-cal", reg: "EPA AIM Act", cat: "Leak Detection (ALD)", base: "EPA AIM Act ALD Calibration", bands: ["Calibration Approaching", "Calibration Overdue"] },
+  { id: "aim-ald-req", reg: "EPA AIM Act", cat: "Leak Detection (ALD)", base: "EPA AIM Act ALD Required", bands: ["ALD Required"] },
+  { id: "carb-m-insp", reg: "CA CARB", cat: "Inspection", cadence: "Monthly", base: "CA CARB Monthly Inspection", bands: ["Approaching", "Due"] },
+  { id: "carb-q-insp", reg: "CA CARB", cat: "Inspection", cadence: "Quarterly", base: "CA CARB Quarterly Inspection", bands: ["Approaching", "Due"] },
+  { id: "carb-a-insp", reg: "CA CARB", cat: "Inspection", cadence: "Annual", base: "CA CARB Annual Inspection", bands: ["Approaching", "Due"] },
+  { id: "carb-repair", reg: "CA CARB", cat: "Repair", cadence: "14-day", base: "CA CARB 14-Day Repair Deadline", bands: ["Approaching", "Exceeded"] },
+  { id: "carb-ald-cal", reg: "CA CARB", cat: "Leak Detection (ALD)", base: "CA CARB ALD Calibration", bands: ["Calibration Approaching", "Calibration Overdue"] },
+  { id: "carb-ald-leak", reg: "CA CARB", cat: "Leak Detection (ALD)", base: "CA CARB ALD-Detected Leak", bands: ["ALD-Detected Leak"] },
+  { id: "wa-m-insp", reg: "WA Ecology", cat: "Inspection", cadence: "Monthly", base: "WA Ecology Monthly Inspection", bands: ["Approaching", "Due"] },
+  { id: "wa-q-insp", reg: "WA Ecology", cat: "Inspection", cadence: "Quarterly", base: "WA Ecology Quarterly Inspection", bands: ["Approaching", "Due"] },
+  { id: "wa-a-insp", reg: "WA Ecology", cat: "Inspection", cadence: "Annual", base: "WA Ecology Annual Inspection", bands: ["Approaching", "Due"] },
+  { id: "wa-leak", reg: "WA Ecology", cat: "Leak Rate", threshold: "16%", base: "WA Ecology Leak Rate", bands: ["Approaching", "Exceeded"] },
+  { id: "wa-repair", reg: "WA Ecology", cat: "Repair", cadence: "14-day", base: "WA Ecology 14-Day Repair Deadline", bands: ["Approaching", "Exceeded"] },
+  { id: "wa-ald-cal", reg: "WA Ecology", cat: "Leak Detection (ALD)", base: "WA Ecology ALD Calibration", bands: ["Calibration Approaching", "Calibration Overdue"] },
+  { id: "wa-ald-req", reg: "WA Ecology", cat: "Leak Detection (ALD)", base: "WA Ecology ALD Required", bands: ["ALD Required"] },
+  { id: "ny-m-insp", reg: "NY DEC", cat: "Inspection", cadence: "Monthly", base: "NY DEC Monthly Inspection", bands: ["Approaching", "Due"] },
+  { id: "ny-q-insp", reg: "NY DEC", cat: "Inspection", cadence: "Quarterly", base: "NY DEC Quarterly Inspection", bands: ["Approaching", "Due"] },
+  { id: "ny-a-insp", reg: "NY DEC", cat: "Inspection", cadence: "Annual", base: "NY DEC Annual Inspection", bands: ["Approaching", "Due"] },
+  { id: "ny-repair", reg: "NY DEC", cat: "Repair", cadence: "14-day", base: "NY DEC 14-Day Repair Deadline", bands: ["Approaching", "Exceeded"] },
+  { id: "ny-ald-cal", reg: "NY DEC", cat: "Leak Detection (ALD)", base: "NY DEC ALD Calibration", bands: ["Calibration Approaching", "Calibration Overdue"] },
+];
+
+const REGIONS = [
+  { id: "reg-nw", name: "Pacific Northwest" },
+  { id: "reg-socal", name: "Southern California" },
+  { id: "reg-norcal", name: "Northern California" },
+];
+
+const LOCATIONS = [
+  { id: "loc-1", name: "Oakland FC-3", state: "CA", region: "reg-norcal" },
+  { id: "loc-2", name: "Anaheim DC-2", state: "CA", region: "reg-socal" },
+  { id: "loc-3", name: "Fresno Plant", state: "CA", region: "reg-norcal" },
+  { id: "loc-4", name: "San Diego FC-1", state: "CA", region: "reg-socal" },
+  { id: "loc-5", name: "Seattle DC-12", state: "WA", region: "reg-nw" },
+  { id: "loc-6", name: "Tacoma Plant", state: "WA", region: "reg-nw" },
+  { id: "loc-7", name: "Bellevue Store 119", state: "WA", region: "reg-nw" },
+];
+
+function regById(id) { return REGIONS.find((r) => r.id === id); }
+
+// ---------- Scope ----------
+// Stored as INTENT, never as a resolved location list. "Pacific Northwest"
+// stays "Pacific Northwest", so a site opened next month is covered
+// automatically. Resolving at save time is what produced the 275-row
+// subscription lists in the current product.
+const SCOPE_ALL = { mode: "all", regionIds: [], locationIds: [] };
+
+function scopeRegions(ids) { return { mode: "regions", regionIds: ids, locationIds: [] }; }
+function scopeLocations(ids) { return { mode: "locations", regionIds: [], locationIds: ids }; }
+
+// Resolve intent against the alert's regulatory territory at read time.
+function resolveScope(scope, coveredIds) {
+  if (!scope || scope.mode === "all") return [...coveredIds];
+  if (scope.mode === "regions") {
+    return coveredIds.filter((id) => scope.regionIds.includes(locById(id).region));
+  }
+  return scope.locationIds.filter((id) => coveredIds.includes(id));
+}
+
+function scopeLabel(scope, coveredIds) {
+  const n = resolveScope(scope, coveredIds).length;
+  if (!scope || scope.mode === "all") return `All locations (${n})`;
+  if (scope.mode === "regions") {
+    if (scope.regionIds.length === 0) return "No regions selected";
+    if (scope.regionIds.length === 1) return `${regById(scope.regionIds[0]).name} (${n})`;
+    return `${scope.regionIds.length} regions (${n})`;
+  }
+  if (scope.locationIds.length === 0) return "No locations selected";
+  if (scope.locationIds.length <= 2) return scope.locationIds.map((id) => locById(id).name).join(", ");
+  return `${scope.locationIds.length} locations`;
+}
+
+const CONTACTS = [
+  "lena.ortiz@caseysrefrigeration.com",
+  "dana.whitfield@caseysrefrigeration.com",
+  "owen.brandt@caseysrefrigeration.com",
+  "ruben.diaz@caseysrefrigeration.com",
+  "grant.mills@caseysrefrigeration.com",
+  "marcus.hale@caseysrefrigeration.com",
+  "nina.foster@caseysrefrigeration.com",
+  "elena.park@advantageindustries.com",
+  "sharon.webb@advantageindustries.com",
+];
+
+function bandDefinition(family, band) {
+  const cad = family.cadence ? family.cadence.toLowerCase() : "";
+  const thr = family.threshold;
+  switch (band) {
+    case "Approaching":
+      if (family.cat === "Inspection") return `Sent ahead of the ${cad} inspection due date, while there's still time to schedule it.`;
+      if (family.cat === "Leak Rate") return `The asset's calculated leak rate is climbing toward the ${family.reg} threshold of ${thr}, but hasn't crossed it.`;
+      if (family.cat === "Repair") return `The ${cad} repair clock is running and the deadline is close.`;
+      return "The condition is close to being met.";
+    case "Due":
+      return `The ${cad} inspection is due now, or the due date has already passed without an inspection logged.`;
+    case "Exceeded":
+      if (family.cat === "Leak Rate") return `The asset's calculated leak rate has crossed the ${family.reg} threshold of ${thr}.`;
+      if (family.cat === "Repair") return `The ${cad} repair deadline has passed without a completed repair on record.`;
+      return "The threshold has been crossed.";
+    case "Chronically Leaking":
+      return `The asset has crossed the ${thr} threshold repeatedly and now meets ${family.reg}'s chronically-leaking definition, which carries additional reporting obligations.`;
+    case "Calibration Approaching":
+      return "The leak detection device's annual calibration is coming due.";
+    case "Calibration Overdue":
+      return "The leak detection device's annual calibration date has passed.";
+    case "ALD Required":
+      return `The asset now meets the ${family.reg} criteria that require an automatic leak detection device to be installed.`;
+    case "ALD-Detected Leak":
+      return "An installed leak detection device has reported a leak on this asset.";
+    default:
+      return "";
+  }
+}
+
+function locationsForReg(reg) {
+  if (reg === "CA CARB") return LOCATIONS.filter((l) => l.state === "CA");
+  if (reg === "WA Ecology") return LOCATIONS.filter((l) => l.state === "WA");
+  if (reg === "NY DEC") return [];
+  return LOCATIONS;
+}
+function locById(id) { return LOCATIONS.find((l) => l.id === id); }
+function isBadBand(b) {
+  return b === "Exceeded" || b === "Calibration Overdue" || b === "Chronically Leaking";
+}
+
+const BREACH_BANDS = ["Due", "Exceeded", "Chronically Leaking", "Calibration Overdue", "ALD Required", "ALD-Detected Leak"];
+
+let uid = 100;
+const nextId = () => `sub-${++uid}`;
+
+const SEED = {
+  "epa608-q-insp": [
+    { id: "sub-1", recipients: ["dana.whitfield@caseysrefrigeration.com"], scope: scopeRegions(["reg-norcal"]), bands: { "Approaching": true, "Due": true }, status: "active" },
+    { id: "sub-2", recipients: ["owen.brandt@caseysrefrigeration.com"], scope: scopeRegions(["reg-nw"]), bands: { "Approaching": false, "Due": true }, status: "active" },
+  ],
+  "epa608-leak": [
+    { id: "sub-5", recipients: ["harold.vance@cloudcompliance.com"], scope: SCOPE_ALL, bands: { "Approaching": true, "Exceeded": true, "Chronically Leaking": true }, status: "active" },
+    // Overlaps sub-5 (All locations ∩ NW, both on Exceeded) — the case the flag catches
+    { id: "sub-7", recipients: ["harold.vance@cloudcompliance.com"], scope: scopeRegions(["reg-nw"]), bands: { "Approaching": false, "Exceeded": true, "Chronically Leaking": false }, status: "active" },
+  ],
+  "wa-leak": [
+    { id: "sub-3", recipients: ["marcus.hale@caseysrefrigeration.com", "sharon.webb@advantageindustries.com"], scope: scopeRegions(["reg-nw"]), bands: { "Approaching": true, "Exceeded": true }, status: "active" },
+  ],
+  "epa608-repair": [
+    { id: "sub-4", recipients: ["lena.ortiz@caseysrefrigeration.com"], scope: SCOPE_ALL, bands: { "Approaching": true, "Exceeded": true }, status: "paused" },
+  ],
+  "epa608-ald-cal": [
+    { id: "sub-6", recipients: ["harold.vance@cloudcompliance.com"], scope: scopeLocations(["loc-5", "loc-2"]), bands: { "Calibration Approaching": true, "Calibration Overdue": true }, status: "active" },
+  ],
+};
+
+// ---------- MUI-shaped primitives ----------
+
+function Button({ variant = "text", color = "primary", size = "medium", children, onClick, disabled, startIcon, style: extra, fullWidth }) {
+  const type = size === "small" ? TYPE.buttonSmall : TYPE.buttonMedium;
+  const pad = size === "small" ? "4px 10px" : "6px 16px";
+  const main = color === "error" ? T.errorMain : T.primaryMain;
+  const base = {
+    ...type,
+    display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8,
+    padding: variant === "text" ? (size === "small" ? "4px 5px" : "6px 8px") : pad,
+    borderRadius: 4, cursor: disabled ? "default" : "pointer",
+    width: fullWidth ? "100%" : undefined,
+    border: variant === "outlined" ? `1px solid ${disabled ? T.actionDisabledBg : T.primaryOutlinedBorder}` : "none",
+    boxSizing: "border-box",
+    transition: "background-color 150ms",
+  };
+  const byVariant = {
+    contained: {
+      backgroundColor: disabled ? T.actionDisabledBg : main,
+      color: disabled ? T.actionDisabled : T.primaryContrast,
+      boxShadow: disabled ? "none" : SHADOW.e2,
+    },
+    outlined: { backgroundColor: "transparent", color: disabled ? T.actionDisabled : main },
+    text: { backgroundColor: "transparent", color: disabled ? T.actionDisabled : main },
+  }[variant];
+
+  return (
+    <button
+      onClick={disabled ? undefined : onClick}
+      disabled={disabled}
+      style={{ ...base, ...byVariant, ...extra }}
+      onMouseEnter={(e) => { if (!disabled && variant !== "contained") e.currentTarget.style.backgroundColor = T.primaryHover; }}
+      onMouseLeave={(e) => { if (!disabled && variant !== "contained") e.currentTarget.style.backgroundColor = "transparent"; }}
+    >
+      {startIcon}
+      {children}
+    </button>
+  );
+}
+
+function IconButton({ children, onClick, title, active, style }) {
+  return (
+    <button
+      onClick={onClick}
+      title={title}
+      style={{
+        border: "none", background: active ? T.primarySelected : "transparent",
+        color: active ? T.primaryMain : "rgba(26,23,59,0.56)",
+        cursor: "pointer", padding: 8, borderRadius: "50%",
+        display: "inline-flex", alignItems: "center", justifyContent: "center",
+        transition: "background-color 150ms",
+        ...style,
+      }}
+      onMouseEnter={(e) => { if (!active) e.currentTarget.style.backgroundColor = T.actionHover; }}
+      onMouseLeave={(e) => { if (!active) e.currentTarget.style.backgroundColor = "transparent"; }}
+    >
+      {children}
+    </button>
+  );
+}
+
+function Chip({ label, selected, onClick, tone = "default", icon }) {
+  const main = tone === "error" ? T.errorMain : T.primaryMain;
+  const bg = tone === "error" ? T.alertErrorBg : T.primarySelected;
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        ...TYPE.chipLabel,
+        display: "inline-flex", alignItems: "center", gap: 6,
+        height: 32, padding: "0 12px", borderRadius: 16,
+        border: `1px solid ${selected ? main : T.grey400}`,
+        backgroundColor: selected ? bg : "transparent",
+        color: selected ? main : T.textPrimary,
+        cursor: onClick ? "pointer" : "default",
+        transition: "background-color 150ms",
+      }}
+    >
+      {icon}
+      {label}
+    </button>
+  );
+}
+
+function Alert({ severity = "info", children }) {
+  const map = {
+    info: { bg: T.alertInfoBg, color: T.alertInfoColor, icon: <Info size={22} color={T.infoMain} /> },
+    success: { bg: T.alertSuccessBg, color: T.alertSuccessColor, icon: <CheckCircle2 size={22} color={T.successMain} /> },
+    error: { bg: T.alertErrorBg, color: T.alertErrorColor, icon: <AlertTriangle size={22} color={T.errorMain} /> },
+    warning: { bg: T.alertWarningBg, color: T.alertWarningColor, icon: <AlertTriangle size={22} color={T.warningMain} /> },
+  }[severity];
+  return (
+    <div style={{
+      backgroundColor: map.bg, color: map.color, borderRadius: 4,
+      padding: "6px 16px", display: "flex", gap: 12, alignItems: "flex-start",
+    }}>
+      <span style={{ padding: "7px 0", display: "flex", flexShrink: 0 }}>{map.icon}</span>
+      <div style={{ ...TYPE.body2, padding: "8px 0", letterSpacing: 0.15 }}>{children}</div>
+    </div>
+  );
+}
+
+function FieldLabel({ children }) {
+  return (
+    <div style={{
+      ...TYPE.caption, color: T.textSecondary,
+      textTransform: "uppercase", letterSpacing: 1, fontFamily: FONT,
+      marginBottom: 8,
+    }}>
+      {children}
+    </div>
+  );
+}
+
+// ---------- Shell ----------
+
+function Header() {
+  return (
+    <div style={{
+      backgroundColor: T.primaryMain, boxShadow: SHADOW.e2,
+      padding: "0 24px 10px", position: "relative", zIndex: 10,
+    }}>
+      <div style={{ height: 72, display: "flex", alignItems: "center", gap: 24 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, color: T.white, flexShrink: 0 }}>
+          <span style={{ fontSize: 22, fontWeight: 300, opacity: 0.95 }}>✕</span>
+          <span style={{ fontFamily: FONT, fontSize: 22, fontWeight: 700, letterSpacing: 0 }}>
+            Fexa<span style={{ fontWeight: 300 }}>Trakref</span>
+          </span>
+        </div>
+
+        <div style={{ flex: 1, maxWidth: 780, margin: "0 auto" }}>
+          <div style={{
+            backgroundColor: T.white, borderRadius: 6, padding: "0 16px",
+            height: 48, boxSizing: "border-box", display: "flex", alignItems: "center", gap: 12,
+          }}>
+            <Search size={22} color={T.primaryMain} />
+            <input
+              type="text"
+              placeholder="Search for Work Orders, Locations, Service Events, or Inventory"
+              style={{
+                ...TYPE.body1, flex: 1, border: "none", outline: "none",
+                color: T.textPrimary, backgroundColor: "transparent",
+              }}
+            />
+          </div>
+        </div>
+
+        <div style={{ display: "flex", alignItems: "center", gap: 20, color: T.white, flexShrink: 0 }}>
+          <span style={{ ...TYPE.body1 }}>Hi Janina</span>
+          <Bell size={22} />
+          <HelpCircle size={22} />
+          <Gift size={22} />
+          <div style={{
+            display: "inline-flex", alignItems: "center", gap: 8,
+            height: 36, padding: "0 16px", borderRadius: 18,
+            backgroundColor: T.primaryDark,
+            ...TYPE.body2, color: T.white, cursor: "pointer",
+          }}>
+            <MessageSquare size={18} color={T.white} /> Support
+          </div>
+          <MoreVertical size={22} />
+        </div>
+      </div>
+
+      <div style={{ display: "flex", justifyContent: "flex-end" }}>
+        <span style={{ ...TYPE.body1, color: T.white }}>Cloud Compliance Real Estate</span>
+      </div>
+    </div>
+  );
+}
+
+function Sidebar() {
+  const [invOpen, setInvOpen] = useState(false);
+  const items = [
+    { icon: Home, label: "Home" },
+    { icon: Gauge, label: "Dashboard" },
+    { icon: ClipboardList, label: "Compliance Center" },
+    { icon: ClipboardCheck, label: "Work Orders" },
+    { icon: FileText, label: "Service Events" },
+    { icon: MapPin, label: "Locations" },
+    {
+      icon: ListChecks, label: "Inventory", expandable: true,
+      children: ["Inventory", "Material Transfers", "Appliance Disposals"],
+    },
+    { icon: PieChart, label: "Reports" },
+    { icon: BarChart3, label: "BI Dashboard" },
+    { icon: FileBarChart, label: "Analytics" },
+    { icon: Lightbulb, label: "Insights" },
+  ];
+
+  return (
+    <div style={{
+      width: 292, backgroundColor: T.bgDefault,
+      borderRight: `1px solid ${T.divider}`, paddingTop: 12, flexShrink: 0,
+    }}>
+      {items.map((item) => {
+        const Icon = item.icon;
+        const open = item.expandable && invOpen;
+        return (
+          <div key={item.label}>
+            <div
+              onClick={() => item.expandable && setInvOpen(!invOpen)}
+              style={{
+                display: "flex", alignItems: "center", gap: 20,
+                padding: "13px 24px", color: open ? T.primaryMain : T.textPrimary,
+                ...TYPE.body1, fontSize: 12, fontWeight: 600, cursor: "pointer",
+                borderLeft: `3px solid ${open ? T.primaryMain : "transparent"}`,
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = T.actionHover}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}
+            >
+              <Icon size={24} color={open ? T.primaryMain : "rgba(26,23,59,0.56)"} weight={300} />
+              <span style={{ flex: 1 }}>{item.label}</span>
+              {item.expandable && (
+                <ChevronDown
+                  size={20}
+                  color={open ? T.primaryMain : "rgba(26,23,59,0.56)"}
+                  style={{ transform: open ? "rotate(180deg)" : "none", transition: "transform 150ms" }}
+                />
+              )}
+            </div>
+            {open && item.children.map((child) => (
+              <div
+                key={child}
+                style={{
+                  padding: "11px 24px 11px 68px", ...TYPE.body1,
+                  fontSize: 12, fontWeight: 600,
+                  color: T.textPrimary, cursor: "pointer",
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = T.actionHover}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}
+              >
+                {child}
+              </div>
+            ))}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// Express a set of location ids as region intent where it lines up exactly,
+// so subtracting a covered region still stores intent rather than a frozen list.
+function scopeForLocations(ids, coveredIds) {
+  if (ids.length === 0) return null;
+  if (ids.length === coveredIds.length) return SCOPE_ALL;
+  const byRegion = {};
+  coveredIds.forEach((id) => {
+    const r = locById(id).region;
+    (byRegion[r] = byRegion[r] || []).push(id);
+  });
+  const whole = Object.keys(byRegion).filter((r) => byRegion[r].every((id) => ids.includes(id)));
+  const accounted = whole.flatMap((r) => byRegion[r]);
+  if (accounted.length === ids.length) return scopeRegions(whole);
+  return scopeLocations(ids);
+}
+
+// Name a set of locations at the level that's actually true: the region when
+// every one of its locations is in the set, the individual sites when it's
+// partial. Collapsing straight to regions makes a half-covered region read as
+// both "already has" and "adding".
+function describeLocations(ids, coveredIds) {
+  const set = new Set(ids);
+  const byRegion = {};
+  coveredIds.forEach((id) => {
+    const r = locById(id).region;
+    (byRegion[r] = byRegion[r] || []).push(id);
+  });
+  const parts = [];
+  REGIONS.forEach((rg) => {
+    const inRegion = byRegion[rg.id] || [];
+    const hit = inRegion.filter((id) => set.has(id));
+    if (hit.length === 0) return;
+    if (hit.length === inRegion.length) { parts.push(rg.name); return; }
+    // Partial region: name the sites only while that stays readable. An account
+    // with hundreds of stores per region must not render a list of store names.
+    if (hit.length <= 3) hit.forEach((id) => parts.push(locById(id).name));
+    else parts.push(`${rg.name} (${hit.length} of ${inRegion.length})`);
+  });
+  return parts;
+}
+
+// ---------- Duplicate detection ----------
+// Model B: a person appears at most once per alert. One subscription carries
+// their scope and their band checkboxes, so a duplicate is structurally
+// impossible rather than something we detect and repair afterwards.
+function existingSubscriptionFor(email, currentSub, allSubs) {
+  const e = String(email).trim().toLowerCase();
+  return allSubs.find((sub) =>
+    sub.id !== currentSub.id && sub.recipients.some((r) => r.toLowerCase() === e)
+  ) || null;
+}
+
+function conflictSummary(sub, coveredIds) {
+  const bands = Object.keys(sub.bands).filter((b) => sub.bands[b]);
+  return `${scopeLabel(sub.scope, coveredIds)} · ${bands.join(", ") || "no conditions"}`;
+}
+
+// ---------- Recipients ----------
+
+function RecipientChips({ recipients, onChange, checkConflicts, onGoToSubscription, coveredIds = [] }) {
+  const [query, setQuery] = useState("");
+  const [dup, setDup] = useState(null);
+  const [conflicts, setConflicts] = useState(null);
+  const inputRef = useRef(null);
+
+  const lower = recipients.map((e) => e.toLowerCase());
+  const isEmail = (s) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(s.trim());
+
+  const suggestions = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return [];
+    return CONTACTS.filter((e) => !lower.includes(e.toLowerCase()) && e.toLowerCase().includes(q)).slice(0, 5);
+  }, [query, lower]);
+
+  const add = (email) => {
+    const clean = String(email).trim().toLowerCase();
+    if (!isEmail(clean)) return;
+    if (lower.includes(clean)) { setDup(clean); setConflicts(null); setQuery(""); return; }
+    setDup(null);
+    // Already covered on this alert? Refuse — this is what sends two emails.
+    // One subscription per person per alert — send them to the one they have
+    const existing = checkConflicts ? checkConflicts(clean) : null;
+    if (existing) {
+      setConflicts({ email: clean, existing });
+      setQuery("");
+      return;
+    }
+    setConflicts(null);
+    onChange([...recipients, clean]);
+    setQuery("");
+    inputRef.current?.focus();
+  };
+
+  const canAddTyped = isEmail(query) && !lower.includes(query.trim().toLowerCase());
+
+  return (
+    <div>
+      {recipients.length > 0 && (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 8 }}>
+          {recipients.map((email) => (
+            <span key={email} style={{
+              ...TYPE.chipLabel,
+              display: "inline-flex", alignItems: "center", gap: 8,
+              height: 32, padding: "0 4px 0 12px", borderRadius: 16,
+              backgroundColor: T.actionSelected, color: T.textPrimary,
+            }}>
+              {email}
+              <button
+                onClick={() => onChange(recipients.filter((x) => x !== email))}
+                aria-label={`Remove ${email}`}
+                style={{
+                  border: "none", background: "transparent", cursor: "pointer",
+                  padding: 0, margin: "0 4px 0 0", display: "flex",
+                  color: "rgba(26,23,59,0.26)",
+                }}
+              >
+                <X size={18} />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+
+      <div style={{
+        display: "flex", alignItems: "center", gap: 8,
+        height: 40, padding: "0 12px", boxSizing: "border-box",
+        border: `1px solid ${T.outlined}`, borderRadius: 4,
+        backgroundColor: T.bgDefault,
+      }}>
+        <Mail size={20} color={T.textSecondary} />
+        <input
+          ref={inputRef}
+          type="email"
+          value={query}
+          onChange={(e) => { setQuery(e.target.value); setDup(null); }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === "," || e.key === " ") {
+              if (canAddTyped) { e.preventDefault(); add(query); }
+              else if (suggestions.length === 1) { e.preventDefault(); add(suggestions[0]); }
+            }
+            if (e.key === "Backspace" && query === "" && recipients.length > 0) onChange(recipients.slice(0, -1));
+          }}
+          onBlur={() => { if (canAddTyped) add(query); }}
+          placeholder="Enter a recipient's email address"
+          style={{
+            ...TYPE.body2, flex: 1, border: "none", outline: "none",
+            color: T.textPrimary, backgroundColor: "transparent",
+          }}
+        />
+        {canAddTyped && <Button variant="contained" size="small" onClick={() => add(query)}>Add</Button>}
+      </div>
+
+      {suggestions.length > 0 && (
+        <div style={{
+          marginTop: 4, borderRadius: 4, backgroundColor: T.bgDefault,
+          boxShadow: SHADOW.e8, overflow: "hidden", padding: "8px 0",
+        }}>
+          {suggestions.map((email) => (
+            <div
+              key={email}
+              onClick={() => add(email)}
+              style={{
+                ...TYPE.menuItemDense, minHeight: 36, padding: "6px 16px",
+                display: "flex", alignItems: "center", gap: 12,
+                cursor: "pointer", color: T.textPrimary,
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = T.actionHover}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "transparent"}
+            >
+              {email}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {conflicts && (
+        <div style={{ marginTop: 8 }}>
+          <Alert severity="info">
+            <div>
+              <strong>{conflicts.email}</strong> already has a subscription for this alert.
+              Edit it to change their locations or conditions.
+            </div>
+            <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              <span style={{ ...TYPE.caption, color: T.alertInfoColor }}>
+                {conflictSummary(conflicts.existing, coveredIds)}
+              </span>
+              <Button size="small" onClick={() => onGoToSubscription?.(conflicts.existing.id)}>
+                Edit it
+              </Button>
+            </div>
+          </Alert>
+        </div>
+      )}
+
+      {dup && (
+        <div style={{ marginTop: 8 }}>
+          <Alert severity="info"><strong>{dup}</strong> is already on this subscription.</Alert>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------- Location picker ----------
+
+// One scope control, three levels. Region is a grouping of locations, so it
+// lives in the same control rather than a parallel dropdown — two controls
+// would let you select contradictory things.
+function ScopePicker({ coveredIds, scope, onChange }) {
+  const [open, setOpen] = useState(false);
+  const mode = scope?.mode || "all";
+  const resolved = resolveScope(scope, coveredIds);
+  const invalid = mode !== "all" && resolved.length === 0;
+
+  const availableRegions = useMemo(() => {
+    const present = new Set(coveredIds.map((id) => locById(id).region));
+    return REGIONS.filter((r) => present.has(r.id));
+  }, [coveredIds]);
+
+  if (coveredIds.length === 0) {
+    return (
+      <div style={{ ...TYPE.body2, color: T.textSecondary, padding: "10px 12px", backgroundColor: T.grey100, borderRadius: 4 }}>
+        No locations in this regulation's territory yet.
+      </div>
+    );
+  }
+
+  const toggleRegion = (id) => {
+    const cur = scope?.regionIds || [];
+    onChange(scopeRegions(cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
+  };
+  const toggleLoc = (id) => {
+    const cur = scope?.locationIds || [];
+    onChange(scopeLocations(cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
+  };
+
+  return (
+    <div>
+      <div
+        onClick={() => setOpen(!open)}
+        style={{
+          display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
+          minHeight: 40, padding: "0 12px", boxSizing: "border-box", cursor: "pointer",
+          border: `1px solid ${invalid ? T.errorMain : open ? T.primaryMain : T.outlined}`,
+          borderRadius: open ? "4px 4px 0 0" : 4, backgroundColor: T.bgDefault,
+        }}
+      >
+        <span style={{ ...TYPE.inputValue, color: invalid ? T.errorMain : T.textPrimary }}>
+          {scopeLabel(scope, coveredIds)}
+        </span>
+        <ChevronDown size={20} color={T.textSecondary} style={{ transform: open ? "rotate(180deg)" : "none" }} />
+      </div>
+
+      {open && (
+        <div style={{
+          border: `1px solid ${T.primaryMain}`, borderTop: "none", borderRadius: "0 0 4px 4px",
+          backgroundColor: T.bgDefault, padding: "8px 0",
+        }}>
+          <ScopeMode
+            label="All locations"
+            sub={`Every location this alert covers, including any added later (${coveredIds.length} today)`}
+            active={mode === "all"}
+            onClick={() => onChange(SCOPE_ALL)}
+          />
+          <ScopeMode
+            label="By region"
+            sub="Whole regions. New sites in a chosen region are covered automatically."
+            active={mode === "regions"}
+            onClick={() => onChange(scopeRegions(scope?.regionIds || []))}
+          />
+          {mode === "regions" && (
+            <div style={{ padding: "4px 16px 8px 40px" }}>
+              {availableRegions.map((r) => {
+                const inReg = coveredIds.filter((id) => locById(id).region === r.id);
+                const on = (scope.regionIds || []).includes(r.id);
+                return (
+                  <div key={r.id} onClick={() => toggleRegion(r.id)}
+                    style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 0", cursor: "pointer" }}>
+                    <MiniCheck on={on} />
+                    <span style={{ ...TYPE.body2, color: T.textPrimary }}>{r.name}</span>
+                    <span style={{ ...TYPE.caption, color: T.textSecondary }}>{inReg.length} locations</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          <ScopeMode
+            label="Specific locations"
+            sub="A fixed list. New sites are NOT covered until you add them here."
+            active={mode === "locations"}
+            onClick={() => onChange(scopeLocations(scope?.locationIds || []))}
+          />
+          {mode === "locations" && (
+            <div style={{ padding: "4px 16px 8px 40px", maxHeight: 200, overflowY: "auto" }}>
+              {coveredIds.map((id) => {
+                const l = locById(id);
+                const on = (scope.locationIds || []).includes(id);
+                return (
+                  <div key={id} onClick={() => toggleLoc(id)}
+                    style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 0", cursor: "pointer" }}>
+                    <MiniCheck on={on} />
+                    <span style={{ ...TYPE.body2, color: T.textPrimary }}>{l.name}</span>
+                    <span style={{ ...TYPE.caption, color: T.textSecondary }}>{regById(l.region).name}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {invalid && (
+        <div style={{ ...TYPE.caption, color: T.errorMain, marginTop: 6 }}>
+          Pick at least one {mode === "regions" ? "region" : "location"}.
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MiniCheck({ on }) {
+  return (
+    <div style={{
+      width: 18, height: 18, borderRadius: 2, flexShrink: 0,
+      border: `2px solid ${on ? T.primaryMain : "rgba(26,23,59,0.56)"}`,
+      backgroundColor: on ? T.primaryMain : "transparent",
+      display: "flex", alignItems: "center", justifyContent: "center",
+    }}>
+      {on && <Check size={13} color={T.white} strokeWidth={3} />}
+    </div>
+  );
+}
+
+function ScopeMode({ label, sub, active, onClick }) {
+  return (
+    <div onClick={onClick}
+      style={{
+        display: "flex", alignItems: "flex-start", gap: 10, padding: "8px 16px", cursor: "pointer",
+        backgroundColor: active ? T.primarySelected : "transparent",
+      }}>
+      <div style={{
+        width: 18, height: 18, borderRadius: "50%", flexShrink: 0, marginTop: 2,
+        border: `2px solid ${active ? T.primaryMain : "rgba(26,23,59,0.38)"}`,
+        display: "flex", alignItems: "center", justifyContent: "center",
+      }}>
+        {active && <div style={{ width: 9, height: 9, borderRadius: "50%", backgroundColor: T.primaryMain }} />}
+      </div>
+      <div>
+        <div style={{ ...TYPE.body2, color: T.textPrimary, fontWeight: active ? 600 : 400 }}>{label}</div>
+        <div style={{ ...TYPE.caption, color: T.textSecondary }}>{sub}</div>
+      </div>
+    </div>
+  );
+}
+
+function BandDefinitions({ family }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div style={{ marginTop: 12 }}>
+      <button
+        onClick={() => setOpen(!open)}
+        style={{
+          ...TYPE.caption, border: "none", background: "transparent",
+          color: T.textSecondary, cursor: "pointer", padding: 0,
+          display: "inline-flex", alignItems: "center", gap: 4, textDecoration: "underline",
+        }}
+      >
+        What do these mean?
+        <ChevronDown size={14} style={{ transform: open ? "rotate(180deg)" : "none", transition: "transform 150ms" }} />
+      </button>
+      {open && (
+        <div style={{
+          marginTop: 8, padding: 16, backgroundColor: T.grey100,
+          borderRadius: 4, display: "flex", flexDirection: "column", gap: 12,
+        }}>
+          {family.bands.map((b) => (
+            <div key={b}>
+              <div style={{ ...TYPE.subtitle2, fontWeight: 700, color: T.textPrimary }}>{b}</div>
+              <div style={{ ...TYPE.caption, color: T.textSecondary }}>{bandDefinition(family, b)}</div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------- Subscription card ----------
+
+function SubscriptionCard({ subscription, family, band, coveredIds, expanded, onToggleExpand, onChange, onDelete, onCommit, canDelete, checkConflicts, onGoToSubscription }) {
+  const s = subscription;
+  // An unsaved new card stays open. Collapsing it would leave the drawer with no
+  // visible action, since an unsaved card also hides Add subscription and the footer.
+  const lockOpen = !!s.isNew;
+  const isOpen = expanded || lockOpen;
+  const anyBand = Object.values(s.bands).some(Boolean);
+  const resolvedLocs = resolveScope(s.scope, coveredIds);
+  const cardValid = s.recipients.length > 0 && resolvedLocs.length > 0 && anyBand;
+  const onBands = family.bands.filter((b) => s.bands[b]);
+
+  const isEmpty = s.recipients.length === 0;
+
+  const summaryTitle = isEmpty
+    ? "New subscription"
+    : s.recipients.length === 1 ? s.recipients[0] : `${s.recipients[0]} +${s.recipients.length - 1}`;
+
+  const summaryMeta = [
+    coveredIds.length === 0 ? "no locations available" : scopeLabel(s.scope, coveredIds),
+    ...(band ? [] : [onBands.length > 0 ? onBands.join(", ") : "no conditions"]),
+  ].join(" · ");
+
+  return (
+    <div style={{
+      backgroundColor: T.bgDefault, borderRadius: 4, marginBottom: 12,
+      boxShadow: isOpen ? SHADOW.e2 : "none",
+      border: `1px solid ${isOpen ? T.primaryMain : T.divider}`,
+      opacity: s.status === "paused" && !isOpen ? 0.72 : 1,
+    }}>
+      <div
+        onClick={lockOpen ? undefined : onToggleExpand}
+        style={{
+          minHeight: 64, padding: "8px 8px 8px 16px",
+          borderBottom: isOpen ? `1px solid ${T.divider}` : "none",
+          display: "flex", alignItems: "center", gap: 16,
+          cursor: lockOpen ? "default" : "pointer",
+        }}
+      >
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{
+            ...TYPE.body1, color: T.textPrimary,
+            whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+            display: "flex", alignItems: "center", gap: 8,
+          }}>
+            {summaryTitle}
+            {s.status === "paused" && (
+              <span style={{
+                ...TYPE.badgeLabel, display: "inline-flex", alignItems: "center", gap: 4,
+                height: 24, padding: "0 8px", borderRadius: 12,
+                backgroundColor: T.actionSelected, color: T.textSecondary,
+                textTransform: "uppercase", flexShrink: 0,
+              }}>
+                <Pause size={12} /> Paused
+              </span>
+            )}
+          </div>
+          {!isOpen && (
+            <div style={{
+              ...TYPE.caption, color: T.textSecondary,
+              whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+            }}>
+              {summaryMeta}
+            </div>
+          )}
+        </div>
+        <div style={{ display: "flex", alignItems: "center", flexShrink: 0 }}>
+          {!lockOpen && (
+            <IconButton
+              title={s.status === "paused" ? "Resume" : "Pause"}
+              onClick={(e) => { e.stopPropagation(); onChange({ ...s, status: s.status === "paused" ? "active" : "paused" }); }}
+            >
+              {s.status === "paused" ? <Play size={20} /> : <Pause size={20} />}
+            </IconButton>
+          )}
+          {canDelete && (
+            <IconButton title="Delete subscription" onClick={(e) => { e.stopPropagation(); onDelete(); }}>
+              <Trash2 size={20} />
+            </IconButton>
+          )}
+          {!lockOpen && (
+            <IconButton
+              title={expanded ? "Close" : "Edit"}
+              active={expanded}
+              onClick={(e) => { e.stopPropagation(); onToggleExpand(); }}
+            >
+              {expanded ? <X size={20} /> : <Pencil size={20} />}
+            </IconButton>
+          )}
+        </div>
+      </div>
+
+      {isOpen && (
+        <div style={{ padding: 16 }}>
+          <div style={{ marginBottom: 24 }}>
+            <FieldLabel>Send to</FieldLabel>
+            <RecipientChips
+              recipients={s.recipients}
+              coveredIds={coveredIds}
+              checkConflicts={checkConflicts}
+              onGoToSubscription={onGoToSubscription}
+              onChange={(r) => onChange({ ...s, recipients: r })}
+            />
+          </div>
+
+          <div style={{ marginBottom: 24 }}>
+            <FieldLabel>For these regions or locations</FieldLabel>
+            <ScopePicker
+              coveredIds={coveredIds}
+              scope={s.scope}
+              onChange={(sc) => onChange({ ...s, scope: sc })}
+            />
+          </div>
+
+          {!band && (
+            <div>
+              <FieldLabel>Notify when</FieldLabel>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {family.bands.map((b) => (
+                  <Chip
+                    key={b}
+                    label={b}
+                    selected={!!s.bands[b]}
+                    tone={isBadBand(b) ? "error" : "default"}
+                    icon={s.bands[b] ? <Check size={16} /> : null}
+                    onClick={() => onChange({ ...s, bands: { ...s.bands, [b]: !s.bands[b] } })}
+                  />
+                ))}
+              </div>
+              {!anyBand && (
+                <div style={{ ...TYPE.caption, color: T.errorMain, marginTop: 8 }}>Pick at least one condition.</div>
+              )}
+              <BandDefinitions family={family} />
+            </div>
+          )}
+
+          <div style={{
+            marginTop: 24, paddingTop: 16, borderTop: `1px solid ${T.divider}`,
+            display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 16,
+          }}>
+            {!cardValid && (
+              <span style={{ ...TYPE.caption, color: T.textSecondary }}>
+                {s.recipients.length === 0 ? "Add at least one recipient"
+                  : resolvedLocs.length === 0 ? "Pick at least one location"
+                  : "Pick at least one condition"}
+              </span>
+            )}
+            <Button variant="contained" onClick={onCommit} disabled={!cardValid}>
+              {s.isNew ? "Subscribe" : "Done"}
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------- Drawer ----------
+
+function DrawerShell({ kicker, title, meta, children, onClose, saveState, canSave, onSave, saveLabel = "Save", showFooter = true, width = 560 }) {
+  return (
+    <>
+      <div onClick={onClose} style={{ position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.5)", zIndex: 40 }} />
+      <div style={{
+        position: "fixed", top: 0, right: 0, bottom: 0, width,
+        backgroundColor: T.bgDefault, zIndex: 50, boxShadow: SHADOW.e16,
+        display: "flex", flexDirection: "column", fontFamily: FONT,
+      }}>
+        <div style={{
+          padding: "16px 24px", borderBottom: `1px solid ${T.divider}`,
+          display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16,
+        }}>
+          <div>
+            <div style={{ ...TYPE.overline, color: T.primaryMain, lineHeight: 1.6 }}>{kicker}</div>
+            <h2 style={{ ...TYPE.h6, color: T.textPrimary, margin: 0 }}>{title}</h2>
+            {meta}
+          </div>
+          <IconButton onClick={onClose} title="Close"><X size={24} /></IconButton>
+        </div>
+
+        <div style={{ flex: 1, overflowY: "auto", padding: 24, backgroundColor: T.grey50 }}>
+          {children}
+        </div>
+
+        {showFooter && (
+          <div style={{ padding: "16px 24px", borderTop: `1px solid ${T.divider}`, backgroundColor: T.bgDefault }}>
+            {saveState === "error" && (
+              <div style={{ marginBottom: 16 }}>
+                <Alert severity="error">
+                  <strong>Your changes didn't save.</strong> Nothing was lost — your edits are still here. Try again, or contact support if this keeps happening.
+                </Alert>
+              </div>
+            )}
+            {saveState === "success" && (
+              <div style={{ marginBottom: 16 }}>
+                <Alert severity="success">Saved.</Alert>
+              </div>
+            )}
+            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+              <Button onClick={onClose}>Cancel</Button>
+              <Button variant="contained" onClick={onSave} disabled={!canSave}>
+                {saveState === "saving" ? "Saving…" : saveState === "error" ? "Try again" : saveLabel}
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
+function MetaRow({ family, band, extra }) {
+  return (
+    <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap", alignItems: "center" }}>
+      <span style={{
+        ...TYPE.chipLabel, height: 24, padding: "0 8px", borderRadius: 12,
+        backgroundColor: T.primarySelected, color: T.primaryDark,
+        display: "inline-flex", alignItems: "center",
+      }}>
+        {family.reg}
+      </span>
+      <span style={{
+        ...TYPE.chipLabel, height: 24, padding: "0 8px", borderRadius: 12,
+        backgroundColor: T.actionSelected, color: T.textSecondary,
+        display: "inline-flex", alignItems: "center",
+      }}>
+        {family.cat}
+      </span>
+      {band && (
+        <span style={{
+          ...TYPE.chipLabel, height: 24, padding: "0 8px", borderRadius: 12,
+          backgroundColor: isBadBand(band) ? "rgba(211,47,47,0.08)" : T.actionSelected,
+          color: isBadBand(band) ? T.errorMain : T.textSecondary,
+          display: "inline-flex", alignItems: "center",
+        }}>
+          {band}
+        </span>
+      )}
+      {extra && <span style={{ ...TYPE.caption, color: T.textSecondary }}>{extra}</span>}
+    </div>
+  );
+}
+
+function AlertDrawer({ family, band, existing, onSave, onClose }) {
+  const coveredIds = useMemo(() => locationsForReg(family.reg).map((l) => l.id), [family.reg]);
+
+  const makeBlank = () => {
+    const bands = {};
+    // Band-scoped: the row IS the condition, so only that band is set.
+    family.bands.forEach((b) => { bands[b] = band ? b === band : true; });
+    return { id: nextId(), recipients: [], scope: SCOPE_ALL, bands, status: "active", isNew: true };
+  };
+
+  // In band-scoped mode only subscriptions covering this band belong to this row.
+  const scoped = band ? (existing || []).filter((s) => s.bands[band]) : (existing || []);
+  const untouched = band ? (existing || []).filter((s) => !s.bands[band]) : [];
+
+  const seeded = scoped.length > 0
+    ? scoped.map((s) => ({ ...s, recipients: [...s.recipients], scope: { ...s.scope }, bands: { ...s.bands } }))
+    : [makeBlank()];
+
+  const [subscriptions, setSubscriptions] = useState(seeded);
+  const [expandedId, setExpandedId] = useState(scoped.length > 0 ? null : seeded[0].id);
+  const [saveState, setSaveState] = useState("idle");
+
+  const baseline = useRef(JSON.stringify(seeded.filter((x) => !x.isNew)));
+  const hasUnsavedNew = subscriptions.some((x) => x.isNew);
+  const isDirty = JSON.stringify(subscriptions.filter((x) => !x.isNew)) !== baseline.current || hasUnsavedNew;
+
+  const valid = subscriptions.length > 0 && subscriptions.every((s) =>
+    s.recipients.length > 0 && resolveScope(s.scope, coveredIds).length > 0 && (band ? true : Object.values(s.bands).some(Boolean))
+  );
+  const canSave = valid && !hasUnsavedNew && saveState !== "saving";
+
+  const updateOne = (id, next) => setSubscriptions((arr) => arr.map((s) => s.id === id ? next : s));
+  const deleteOne = (id) => {
+    setSubscriptions((arr) => arr.filter((s) => s.id !== id));
+    if (expandedId === id) setExpandedId(null);
+  };
+  const addOne = () => {
+    const blank = makeBlank();
+    setSubscriptions((arr) => [blank, ...arr]);
+    setExpandedId(blank.id);
+  };
+  const commitOne = (id) => {
+    setSubscriptions((arr) => arr.map((s) => s.id === id ? { ...s, isNew: false } : s));
+    setExpandedId(null);
+  };
+
+  // Narrow each recipient to the locations they don't already receive this
+  // alert for, so two subscriptions can't both fire for the same place.
+  // One subscription per person per alert. Cards that end up with identical
+  // scope, bands and status are merged so two people who want the same thing
+  // share a row; a person can never appear on two rows.
+  const dedupe = (subs) => {
+    const seen = new Set();
+    const groups = {};
+    subs.forEach((sub) => {
+      const fresh = sub.recipients.filter((e) => {
+        const k = e.toLowerCase();
+        if (seen.has(k)) return false;
+        seen.add(k);
+        return true;
+      });
+      if (fresh.length === 0) return;
+      const bandKey = Object.keys(sub.bands).filter((x) => sub.bands[x]).sort().join("|");
+      const k = [bandKey, JSON.stringify(sub.scope), sub.status].join("::");
+      if (!groups[k]) groups[k] = { ...sub, recipients: [] };
+      groups[k].recipients.push(...fresh);
+    });
+    return Object.values(groups);
+  };
+
+  const handleSave = () => {
+    setSaveState("saving");
+    setTimeout(() => {
+      setSaveState("success");
+      setTimeout(() => onSave([
+        ...dedupe(subscriptions.map(({ isNew, ...rest }) => rest)),
+        ...untouched,
+      ]), 550);
+    }, 650);
+  };
+
+  const totalRecipients = new Set(subscriptions.flatMap((s) => s.recipients)).size;
+
+  return (
+    <DrawerShell
+      kicker={scoped.length > 0 ? "Manage subscriptions" : "New subscription"}
+      title={band ? `${family.base} ${band}` : family.base}
+      meta={<MetaRow
+        family={family}
+        band={band}
+        extra={`${subscriptions.length} ${subscriptions.length === 1 ? "subscription" : "subscriptions"}${totalRecipients > 0 ? ` · ${totalRecipients} ${totalRecipients === 1 ? "recipient" : "recipients"}` : ""}`}
+      />}
+      onClose={onClose}
+      saveState={saveState}
+      canSave={canSave}
+      onSave={handleSave}
+      showFooter={isDirty && !hasUnsavedNew}
+    >
+      {!hasUnsavedNew && (
+        <div style={{ marginBottom: 12 }}>
+          <Button
+            variant="outlined"
+            fullWidth
+            onClick={addOne}
+            startIcon={<Plus size={20} />}
+            style={{ height: 44, borderStyle: "dashed", backgroundColor: T.bgDefault }}
+          >
+            Add subscription
+          </Button>
+        </div>
+      )}
+
+      {subscriptions.map((s) => (
+        <SubscriptionCard
+          key={s.id}
+          subscription={s}
+          family={family}
+          band={band}
+          coveredIds={coveredIds}
+          checkConflicts={(email) => existingSubscriptionFor(email, s, subscriptions)}
+          onGoToSubscription={(id) => setExpandedId(id)}
+          expanded={expandedId === s.id}
+          onToggleExpand={() => setExpandedId(expandedId === s.id ? null : s.id)}
+          onChange={(next) => updateOne(s.id, next)}
+          onDelete={() => deleteOne(s.id)}
+          onCommit={() => commitOne(s.id)}
+          canDelete={subscriptions.length > 1}
+        />
+      ))}
+    </DrawerShell>
+  );
+}
+
+// ---------- Batch drawer ----------
+
+function BatchDrawer({ targets, store, onSave, onClose }) {
+  const families = targets.map((t) => t.family);
+  // If every selected row carries its own band, the band is already decided and
+  // the intent control is redundant — that's the per-sub-category model's payoff.
+  const bandExplicit = targets.every((t) => !!t.band);
+
+  const [recipients, setRecipients] = useState([]);
+  const [intent, setIntent] = useState("both");
+  const [overrides, setOverrides] = useState({}); // rowKey -> scope
+  const [editingRow, setEditingRow] = useState(null);
+  const [saveState, setSaveState] = useState("idle");
+
+  const keyOf = (t) => t.family.id + (t.band ? `::${t.band}` : "");
+
+  // Locations for one target: its own override if set, otherwise everything its territory covers
+  const bandsFor = (t) => {
+    const out = {};
+    if (t.band) {
+      t.family.bands.forEach((b) => { out[b] = b === t.band; });
+      return out;
+    }
+    t.family.bands.forEach((b) => { out[b] = intent === "both" ? true : BREACH_BANDS.includes(b); });
+    if (!Object.values(out).some(Boolean)) t.family.bands.forEach((b) => { out[b] = true; });
+    return out;
+  };
+
+  const scopeFor = (t) => overrides[keyOf(t)] || SCOPE_ALL;
+  const locsFor = (t) => resolveScope(scopeFor(t), locationsForReg(t.family.reg).map((l) => l.id));
+
+  const regs = [...new Set(families.map((f) => f.reg))];
+  const canSave = recipients.length > 0 && saveState !== "saving";
+
+  // Already-subscribed check, per selected alert. Not blocking — just visible
+  // before committing, which is the point at their scale.
+  // A person either already has a subscription for this alert or they don't.
+  // No subtraction, no partial coverage — Model B allows one per person.
+  const planFor = (t) => recipients.map((email) => {
+    const already = (store[t.family.id] || []).some((sub) =>
+      sub.recipients.some((r) => r.toLowerCase() === email.toLowerCase())
+    );
+    return { email, already };
+  });
+
+  const plans = targets.map((t) => ({ t, rows: planFor(t) }));
+  const partials = plans.filter((p) => p.rows.some((r) => r.already));
+
+  const willSubscribe = plans.filter((p) => p.rows.some((r) => !r.already)).map((p) => p.t);
+
+  const handleSave = () => {
+    setSaveState("saving");
+    setTimeout(() => {
+      setSaveState("success");
+      setTimeout(() => {
+        const out = [];
+        plans.forEach(({ t, rows }) => {
+          const covered = locationsForReg(t.family.reg).map((l) => l.id);
+          const fresh = rows.filter((r) => !r.already).map((r) => r.email);
+          if (covered.length === 0 || fresh.length === 0) {
+            out.push({ familyId: t.family.id, skipped: true, duplicate: fresh.length === 0 });
+            return;
+          }
+          out.push({
+            familyId: t.family.id,
+            subscription: {
+              id: nextId(), recipients: fresh,
+              scope: scopeFor(t), bands: bandsFor(t), status: "active",
+            },
+            skipped: false,
+          });
+        });
+        onSave(out);
+      }, 550);
+    }, 700);
+  };
+
+  return (
+    <DrawerShell
+      kicker="Add a subscription to many alerts"
+      title={`${targets.length} alerts selected`}
+      meta={
+        <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+          {regs.map((r) => (
+            <span key={r} style={{
+              ...TYPE.chipLabel, height: 24, padding: "0 8px", borderRadius: 12,
+              backgroundColor: T.primarySelected, color: T.primaryDark,
+              display: "inline-flex", alignItems: "center",
+            }}>
+              {r}
+            </span>
+          ))}
+        </div>
+      }
+      onClose={onClose}
+      saveState={saveState}
+      canSave={canSave}
+      onSave={handleSave}
+      saveLabel={willSubscribe.length < targets.length
+        ? `Subscribe to ${willSubscribe.length} of ${targets.length} alerts`
+        : `Subscribe to ${targets.length} alerts`}
+    >
+      <div style={{ ...TYPE.body2, color: T.textSecondary, marginBottom: 16 }}>
+        Adds one subscription to each selected alert. Existing subscriptions are left alone.
+      </div>
+
+      <div style={{
+        backgroundColor: T.bgDefault, border: `1px solid ${T.divider}`,
+        borderRadius: 4, padding: 16, marginBottom: 16,
+      }}>
+        <div style={{ marginBottom: 24 }}>
+          <FieldLabel>Send to</FieldLabel>
+          <RecipientChips recipients={recipients} onChange={setRecipients} />
+        </div>
+
+        {!bandExplicit && (
+          <div>
+            <FieldLabel>Notify when</FieldLabel>
+            <div style={{ ...TYPE.caption, color: T.textSecondary, marginBottom: 12 }}>
+              These alerts have different conditions, so pick how much notice you want.
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <IntentOption
+                active={intent === "both"}
+                onClick={() => setIntent("both")}
+                title="Warning and when hit"
+                desc="A heads-up as a deadline or threshold approaches, plus a notice when it's crossed."
+              />
+              <IntentOption
+                active={intent === "breach"}
+                onClick={() => setIntent("breach")}
+                title="Only when hit"
+                desc="Fewer emails. Only when something is due, exceeded, or overdue."
+              />
+            </div>
+          </div>
+        )}
+      </div>
+
+      <FieldLabel>What you'll add ({targets.length})</FieldLabel>
+      {partials.length > 0 && (
+        <div style={{ marginBottom: 12 }}>
+          <Alert severity="info">
+            Recipients who already have a subscription for one of these alerts won't be added
+            again. Edit their existing subscription to change its locations or conditions.
+          </Alert>
+        </div>
+      )}
+      <div style={{
+        border: `1px solid ${T.divider}`, borderRadius: 4, overflow: "hidden",
+        backgroundColor: T.bgDefault,
+      }}>
+        {targets.map((t, i) => {
+          const f = t.family;
+          const k = keyOf(t);
+          const famCovered = locationsForReg(f.reg).map((l) => l.id);
+          const locs = locsFor(t);
+          const on = f.bands.filter((b) => bandsFor(t)[b]);
+          const isEditing = editingRow === k;
+          const isOverridden = !!overrides[k];
+
+          return (
+            <div key={k} style={{
+              borderBottom: i < targets.length - 1 ? `1px solid ${T.divider}` : "none",
+              backgroundColor: isEditing ? T.primarySelected : "transparent",
+            }}>
+              <div style={{
+                padding: "10px 8px 10px 16px", display: "flex",
+                alignItems: "center", gap: 12,
+                opacity: locs.length === 0 ? 0.6 : 1,
+              }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ ...TYPE.body2, color: T.textPrimary, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                    {t.band ? `${f.base} ${t.band}` : f.base}
+
+                  </div>
+                  <div style={{ ...TYPE.caption, color: T.textSecondary }}>
+                    {famCovered.length === 0
+                      ? "No locations in this territory — will be skipped"
+                      : locs.length === 0
+                        ? "No locations selected — will be skipped"
+                        : `${on.join(", ")} · ${scopeLabel(scopeFor(t), famCovered)}`}
+                    {isOverridden && " · custom"}
+                  </div>
+                </div>
+                {famCovered.length > 0 && (
+                  <Button size="small" onClick={() => setEditingRow(isEditing ? null : k)}>
+                    {isEditing ? "Done" : "Edit Locations"}
+                  </Button>
+                )}
+              </div>
+
+              {isEditing && (
+                <div style={{ padding: "0 16px 12px" }}>
+                  <ScopePicker
+                    coveredIds={famCovered}
+                    scope={scopeFor(t)}
+                    onChange={(sc) => setOverrides((o) => ({ ...o, [k]: sc }))}
+                  />
+                  {isOverridden && (
+                    <div style={{ marginTop: 8 }}>
+                      <Button
+                        size="small"
+                        onClick={() => setOverrides((o) => { const n = { ...o }; delete n[k]; return n; })}
+                      >
+                        Reset to default
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </DrawerShell>
+  );
+}
+
+function IntentOption({ active, onClick, title, desc }) {
+  return (
+    <div
+      onClick={onClick}
+      role="radio"
+      aria-checked={active}
+      tabIndex={0}
+      style={{
+        padding: 16, borderRadius: 4, cursor: "pointer",
+        border: `1px solid ${active ? T.primaryMain : T.outlined}`,
+        backgroundColor: active ? T.primarySelected : T.bgDefault,
+        display: "flex", gap: 12, alignItems: "flex-start",
+      }}
+    >
+      <div style={{
+        width: 20, height: 20, borderRadius: "50%",
+        border: `2px solid ${active ? T.primaryMain : "rgba(26,23,59,0.56)"}`,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        flexShrink: 0, marginTop: 2,
+      }}>
+        {active && <span style={{ width: 10, height: 10, borderRadius: "50%", backgroundColor: T.primaryMain }} />}
+      </div>
+      <div>
+        <div style={{ ...TYPE.body2, color: T.textPrimary }}>{title}</div>
+        <div style={{ ...TYPE.caption, color: T.textSecondary }}>{desc}</div>
+      </div>
+    </div>
+  );
+}
+
+// ---------- Rail + tabs ----------
+
+// Faithful to Analytics: 3px teal bar and teal text when active, no background
+// fill, hover only. Sub-labels are our one divergence — they carry the counts
+// and the "no assets" state the alerts page is required to show.
+function AnalyticsRailItem({ label, sub, active, dimmed, onClick }) {
+  return (
+    <div
+      onClick={onClick}
+      style={{
+        padding: "8px 24px 8px 21px",
+        borderLeft: `3px solid ${active ? T.primaryMain : "transparent"}`,
+        cursor: "pointer", opacity: dimmed ? 0.6 : 1,
+      }}
+      onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = T.actionHover; }}
+      onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
+    >
+      <div style={{ ...TYPE.body2, fontWeight: 600, color: active ? T.primaryMain : T.textPrimary }}>
+        {label}
+      </div>
+      {sub && <div style={{ ...TYPE.caption, color: T.textSecondary }}>{sub}</div>}
+    </div>
+  );
+}
+
+function RailItem({ label, sub, active, dimmed, onClick }) {
+  return (
+    <div
+      onClick={onClick}
+      style={{
+        padding: "10px 16px",
+        borderLeft: `3px solid ${active ? T.primaryMain : "transparent"}`,
+        backgroundColor: active ? T.primarySelected : "transparent",
+        cursor: "pointer", opacity: dimmed ? 0.6 : 1,
+      }}
+      onMouseEnter={(e) => { if (!active) e.currentTarget.style.backgroundColor = T.actionHover; }}
+      onMouseLeave={(e) => { if (!active) e.currentTarget.style.backgroundColor = "transparent"; }}
+    >
+      <div style={{ ...TYPE.body2, color: active ? T.primaryDark : T.textPrimary, fontWeight: active ? 700 : 400 }}>
+        {label}
+      </div>
+      <div style={{ ...TYPE.caption, color: T.textSecondary }}>{sub}</div>
+    </div>
+  );
+}
+
+// ---------- Alerts Sent ----------
+// The delivery log: what actually fired, to whom. Mirrors the existing
+// Alerts Sent page (ADO 16929), folded in here as a third tab.
+const INSTANCE = "Cloud Compliance Real Estate";
+const ALERTS_TO = "alerts@cloudcompliance.com";
+const ALERTS_CC = "harold.vance@cloudcompliance.com;megan.ruiz@cloudcompliance.com";
+
+const SENT_LOG = [
+  { id: 39, se: "2222097", wo: "WO-20260826-WA-LeakRate- 03", dos: "08/21/2026", gas: "8.00 lbs, R-11", addr: "1420 Front St, Tacoma, WA 98402", avg: "28.00%", at: "8/27/2026 4:32 PM", to: "harold.vance@cloudcompliance.com", cc: "", subject: "WA Leak Rate Exceeded — Action Required", region: "FL", location: "Cedar Park - CDP - 10412", assetId: "1291836", assetName: "CCRE-05082026-INV01", type: "WA leak rate - Process Refrigeration", tag: "WA_RMP_100200300_Process_RollingAvg", rate: "18.4%", threshold: "16%" },
+  { id: 38, se: "2222038", wo: "WO-20260826-WA-LeakRate- 08", dos: "08/21/2026", gas: "8.00 lbs, R-11", addr: "1420 Front St, Tacoma, WA 98402", avg: "", at: "8/27/2026 4:32 PM", to: "harold.vance@cloudcompliance.com", cc: "", subject: "WA Leak Rate Exceeded — Action Required", region: "FL", location: "Cedar Park - CDP - 10412", assetId: "1287365", assetName: "CCRE-02032025-INV02", type: "WA leak rate - Comfort Cooling", tag: "WA_RMP_100200300_Comfort_RollingAvg", rate: "17.1%", threshold: "16%" },
+  { id: 24, se: "2222024", wo: "WO-20260826-WA-LeakRate- 04", dos: "08/21/2026", gas: "8.00 lbs, R-11", addr: "1420 Front St, Tacoma, WA 98402", avg: "", at: "8/25/2026 6:30 PM", to: ALERTS_TO, cc: ALERTS_CC, subject: "WA Leak Rate Exceeded — Action Required", region: "FL", location: "Cedar Park - CDP - 10412", assetId: "1292677", assetName: "CCRE-19082026-INV3", type: "WA leak rate - Process Refrigeration", tag: "WA_RMP_100200300_Process_RollingAvg", rate: "21.8%", threshold: "16%" },
+  { id: 21, se: "2222021", wo: "WO-20260826-WA-LeakRate- 01", dos: "08/21/2026", gas: "8.00 lbs, R-11", addr: "1420 Front St, Tacoma, WA 98402", avg: "", at: "8/20/2026 1:59 PM", to: ALERTS_TO, cc: ALERTS_CC, subject: "WA State Leak Rate Threshold Approaching", region: "FL", location: "Cedar Park - CDP - 10412", assetId: "1292676", assetName: "CCRE-19082026-INV2", type: "WA leak rate - Comfort Cooling", tag: "WA_RMP_100200300_Comfort_RollingAvg", rate: "14.2%", threshold: "16%" },
+  { id: 20, se: "2222020", wo: "WO-20260826-WA-LeakRate- 00", dos: "08/21/2026", gas: "8.00 lbs, R-11", addr: "1420 Front St, Tacoma, WA 98402", avg: "", at: "8/20/2026 1:58 PM", to: ALERTS_TO, cc: ALERTS_CC, subject: "WA State Leak Rate Threshold Approaching", region: "FL", location: "Cedar Park - CDP - 10412", assetId: "1292675", assetName: "CCRE-19082026-INV1", type: "WA leak rate - Refrigerated Transport", tag: "WA_RMP_100200300_Refrig_RollingAvg", rate: "13.9%", threshold: "16%" },
+  { id: 19, se: "2222019", wo: "WO-20260826-WA-LeakRate- 09", dos: "08/21/2026", gas: "8.00 lbs, R-11", addr: "1420 Front St, Tacoma, WA 98402", avg: "", at: "8/20/2026 1:58 PM", to: ALERTS_TO, cc: ALERTS_CC, subject: "WA State Leak Rate Threshold Approaching", region: "R 2 TN", location: "Stone Ridge - STR - 10418", assetId: "1292359", assetName: "CCRE-14082026-INV7", type: "WA leak rate - Process Refrigeration", tag: "WA_RMP_100200300_Process_RollingAvg", rate: "15.1%", threshold: "16%" },
+  { id: 18, se: "2222018", wo: "WO-20260826-WA-LeakRate- 08", dos: "08/21/2026", gas: "8.00 lbs, R-11", addr: "1420 Front St, Tacoma, WA 98402", avg: "", at: "8/20/2026 1:57 PM", to: ALERTS_TO, cc: ALERTS_CC, subject: "WA State Leak Rate Threshold Approaching", region: "R 2 TN", location: "Stone Ridge - STR - 10418", assetId: "1292358", assetName: "CCRE-14082026-INV6", type: "WA leak rate - Comfort Cooling", tag: "WA_RMP_100200300_Comfort_RollingAvg", rate: "14.7%", threshold: "16%" },
+  { id: 17, se: "2222017", wo: "WO-20260826-WA-LeakRate- 07", dos: "08/21/2026", gas: "8.00 lbs, R-11", addr: "1420 Front St, Tacoma, WA 98402", avg: "", at: "8/20/2026 1:57 PM", to: ALERTS_TO, cc: ALERTS_CC, subject: "WA State Leak Rate Threshold Approaching", region: "—", location: "Compliance Review Site", assetId: "1285723", assetName: "CRS_S4_Refrig_20260601", type: "WA leak rate - Refrigerated Transport", tag: "WA_RMP_100200300_Refrig_RollingAvg", rate: "15.6%", threshold: "16%" },
+  { id: 16, se: "2222016", wo: "WO-20260826-WA-LeakRate- 06", dos: "08/21/2026", gas: "8.00 lbs, R-11", addr: "1420 Front St, Tacoma, WA 98402", avg: "", at: "8/20/2026 1:56 PM", to: ALERTS_TO, cc: ALERTS_CC, subject: "WA State Leak Rate Threshold Approaching", region: "—", location: "Compliance Review Site", assetId: "1285722", assetName: "CRS_S3_Refrig_20260601", type: "WA leak rate - Refrigerated Transport", tag: "WA_RMP_100200300_Refrig_RollingAvg", rate: "15.2%", threshold: "16%" },
+  { id: 15, se: "2222015", wo: "WO-20260826-WA-LeakRate- 05", dos: "08/21/2026", gas: "8.00 lbs, R-11", addr: "1420 Front St, Tacoma, WA 98402", avg: "", at: "8/20/2026 1:56 PM", to: ALERTS_TO, cc: ALERTS_CC, subject: "WA State Leak Rate Threshold Approaching", region: "—", location: "Compliance Review Site", assetId: "1285648", assetName: "CRS_S3_Refrig_20260601", type: "WA leak rate - Refrigerated Transport", tag: "WA_RMP_100200300_Refrig_RollingAvg", rate: "15.0%", threshold: "16%" },
+  { id: 14, se: "2222014", wo: "WO-20260826-WA-LeakRate- 04", dos: "08/21/2026", gas: "8.00 lbs, R-11", addr: "1420 Front St, Tacoma, WA 98402", avg: "", at: "8/18/2026 9:12 AM", to: ALERTS_TO, cc: ALERTS_CC, subject: "EPA 608 Quarterly Inspection Due", region: "R 2 TN", location: "Stone Ridge - STR - 10418", assetId: "1285601", assetName: "CCRE-11082026-INV2", type: "EPA 608 - Quarterly Inspection", tag: "EPA608_Q_100200300_Insp", rate: "—", threshold: "Due 8/20/2026" },
+  { id: 13, se: "2222013", wo: "WO-20260826-WA-LeakRate- 03", dos: "08/21/2026", gas: "8.00 lbs, R-11", addr: "1420 Front St, Tacoma, WA 98402", avg: "", at: "8/18/2026 9:12 AM", to: ALERTS_TO, cc: ALERTS_CC, subject: "EPA 608 Quarterly Inspection Due", region: "FL", location: "Cedar Park - CDP - 10412", assetId: "1285600", assetName: "CCRE-11082026-INV1", type: "EPA 608 - Quarterly Inspection", tag: "EPA608_Q_100200300_Insp", rate: "—", threshold: "Due 8/20/2026" },
+  { id: 12, se: "2222012", wo: "WO-20260826-WA-LeakRate- 02", dos: "08/21/2026", gas: "8.00 lbs, R-11", addr: "1420 Front St, Tacoma, WA 98402", avg: "", at: "8/14/2026 3:40 PM", to: ALERTS_TO, cc: ALERTS_CC, subject: "30-Day Repair Deadline Approaching", region: "FL", location: "Cedar Park - CDP - 10412", assetId: "1284990", assetName: "CCRE-02032025-INV02", type: "EPA 608 - Repair Deadline", tag: "EPA608_RPR_100200300_30D", rate: "—", threshold: "Due 8/29/2026" },
+  { id: 11, se: "2222011", wo: "WO-20260826-WA-LeakRate- 01", dos: "08/21/2026", gas: "8.00 lbs, R-11", addr: "1420 Front St, Tacoma, WA 98402", avg: "", at: "8/14/2026 3:40 PM", to: ALERTS_TO, cc: ALERTS_CC, subject: "30-Day Repair Deadline Approaching", region: "R 2 TN", location: "Stone Ridge - STR - 10418", assetId: "1284982", assetName: "CCRE-14082026-INV6", type: "EPA 608 - Repair Deadline", tag: "EPA608_RPR_100200300_30D", rate: "—", threshold: "Due 8/29/2026" },
+  { id: 10, se: "2222010", wo: "WO-20260826-WA-LeakRate- 00", dos: "08/21/2026", gas: "8.00 lbs, R-11", addr: "1420 Front St, Tacoma, WA 98402", avg: "", at: "8/11/2026 7:05 AM", to: ALERTS_TO, cc: ALERTS_CC, subject: "ALD Calibration Overdue", region: "FL", location: "Cedar Park - CDP - 10412", assetId: "1284455", assetName: "ALD-CCRE-0042", type: "EPA 608 - ALD Calibration", tag: "EPA608_ALD_100200300_Cal", rate: "—", threshold: "Overdue 12 days" },
+  { id: 9, se: "2222009", wo: "WO-20260826-WA-LeakRate- 09", dos: "08/21/2026", gas: "8.00 lbs, R-11", addr: "1420 Front St, Tacoma, WA 98402", avg: "", at: "8/11/2026 7:05 AM", to: ALERTS_TO, cc: ALERTS_CC, subject: "ALD Calibration Approaching", region: "R 2 TN", location: "Stone Ridge - STR - 10418", assetId: "1284454", assetName: "ALD-CCRE-0041", type: "EPA 608 - ALD Calibration", tag: "EPA608_ALD_100200300_Cal", rate: "—", threshold: "Due 8/24/2026" },
+  { id: 8, se: "2222008", wo: "WO-20260826-WA-LeakRate- 08", dos: "08/21/2026", gas: "8.00 lbs, R-11", addr: "1420 Front St, Tacoma, WA 98402", avg: "", at: "8/07/2026 11:22 AM", to: ALERTS_TO, cc: ALERTS_CC, subject: "WA Leak Rate Exceeded — Action Required", region: "FL", location: "Cedar Park - CDP - 10412", assetId: "1283900", assetName: "CCRE-19082026-INV3", type: "WA leak rate - Process Refrigeration", tag: "WA_RMP_100200300_Process_RollingAvg", rate: "19.3%", threshold: "16%" },
+  { id: 7, se: "2222007", wo: "WO-20260826-WA-LeakRate- 07", dos: "08/21/2026", gas: "8.00 lbs, R-11", addr: "1420 Front St, Tacoma, WA 98402", avg: "", at: "8/07/2026 11:22 AM", to: ALERTS_TO, cc: ALERTS_CC, subject: "Chronically Leaking Asset", region: "FL", location: "Cedar Park - CDP - 10412", assetId: "1283877", assetName: "CCRE-05082026-INV01", type: "EPA 608 - Chronic Leak", tag: "EPA608_LR_100200300_Chronic", rate: "26.5%", threshold: "20%" },
+  { id: 6, se: "2222006", wo: "WO-20260826-WA-LeakRate- 06", dos: "08/21/2026", gas: "8.00 lbs, R-11", addr: "1420 Front St, Tacoma, WA 98402", avg: "", at: "8/03/2026 8:00 AM", to: ALERTS_TO, cc: ALERTS_CC, subject: "EPA 608 Annual Inspection Approaching", region: "—", location: "Compliance Review Site", assetId: "1283400", assetName: "CRS_S1_Comfort_20260601", type: "EPA 608 - Annual Inspection", tag: "EPA608_A_100200300_Insp", rate: "—", threshold: "Due 9/01/2026" },
+  { id: 5, se: "2222005", wo: "WO-20260826-WA-LeakRate- 05", dos: "08/21/2026", gas: "8.00 lbs, R-11", addr: "1420 Front St, Tacoma, WA 98402", avg: "", at: "8/03/2026 8:00 AM", to: ALERTS_TO, cc: ALERTS_CC, subject: "EPA 608 Annual Inspection Approaching", region: "FL", location: "Cedar Park - CDP - 10412", assetId: "1283399", assetName: "CCRE-02032025-INV02", type: "EPA 608 - Annual Inspection", tag: "EPA608_A_100200300_Insp", rate: "—", threshold: "Due 9/01/2026" },
+  { id: 4, se: "2222004", wo: "WO-20260826-WA-LeakRate- 04", dos: "08/21/2026", gas: "8.00 lbs, R-11", addr: "1420 Front St, Tacoma, WA 98402", avg: "", at: "7/29/2026 2:15 PM", to: ALERTS_TO, cc: ALERTS_CC, subject: "WA State Leak Rate Threshold Approaching", region: "R 2 TN", location: "Stone Ridge - STR - 10418", assetId: "1282110", assetName: "CCRE-14082026-INV7", type: "WA leak rate - Process Refrigeration", tag: "WA_RMP_100200300_Process_RollingAvg", rate: "14.9%", threshold: "16%" },
+  { id: 3, se: "2222003", wo: "WO-20260826-WA-LeakRate- 03", dos: "08/21/2026", gas: "8.00 lbs, R-11", addr: "1420 Front St, Tacoma, WA 98402", avg: "", at: "7/29/2026 2:15 PM", to: ALERTS_TO, cc: ALERTS_CC, subject: "30-Day Repair Deadline Exceeded", region: "FL", location: "Cedar Park - CDP - 10412", assetId: "1282098", assetName: "CCRE-19082026-INV1", type: "EPA 608 - Repair Deadline", tag: "EPA608_RPR_100200300_30D", rate: "—", threshold: "Overdue 4 days" },
+  { id: 2, se: "2222002", wo: "WO-20260826-WA-LeakRate- 02", dos: "08/21/2026", gas: "8.00 lbs, R-11", addr: "1420 Front St, Tacoma, WA 98402", avg: "", at: "7/22/2026 6:48 PM", to: ALERTS_TO, cc: ALERTS_CC, subject: "ALD Required for Asset", region: "FL", location: "Cedar Park - CDP - 10412", assetId: "1281455", assetName: "CCRE-05082026-INV01", type: "EPA AIM Act - ALD Required", tag: "AIM_ALD_100200300_Req", rate: "—", threshold: "1,500 lbs charge" },
+  { id: 1, se: "2222001", wo: "WO-20260826-WA-LeakRate- 01", dos: "08/21/2026", gas: "8.00 lbs, R-11", addr: "1420 Front St, Tacoma, WA 98402", avg: "", at: "7/22/2026 6:48 PM", to: ALERTS_TO, cc: ALERTS_CC, subject: "EPA 608 Quarterly Inspection Due", region: "R 2 TN", location: "Stone Ridge - STR - 10418", assetId: "1281400", assetName: "CCRE-11082026-INV2", type: "EPA 608 - Quarterly Inspection", tag: "EPA608_Q_100200300_Insp", rate: "—", threshold: "Due 7/25/2026" },
+];
+
+// Body details the real email includes beyond the log columns.
+const SENT_DETAIL = {
+  assetType: { "WA leak rate - Process Refrigeration": "Process Cooling", "WA leak rate - Comfort Cooling": "Comfort Cooling", "WA leak rate - Refrigerated Transport": "Refrigerated Transport" },
+  citation: {
+    WA: "the Washington State Department of Ecology leak rate threshold under Chapters 173-443 WAC",
+    EPA: "the U.S. EPA Section 608 leak rate threshold under 40 CFR Part 82, Subpart F",
+    AIM: "the U.S. EPA AIM Act leak detection requirements under 40 CFR Part 84, Subpart B",
+  },
+};
+
+const SENT_COLUMN_DEFS = [
+  { id: "instance", label: "Instance", width: 200 },
+  { id: "emailId", label: "Email ID", width: 110 },
+  { id: "at", label: "Sent at", width: 190 },
+  { id: "to", label: "Recipient email (to)", width: 220 },
+  { id: "cc", label: "Recipient email (cc)", width: 220 },
+  { id: "subject", label: "Subject", width: 240 },
+  { id: "region", label: "Region", width: 120 },
+  { id: "location", label: "Location", width: 190 },
+  { id: "assetId", label: "Asset ID", width: 120 },
+  { id: "assetName", label: "Asset name", width: 200 },
+  { id: "type", label: "Alert type", width: 220 },
+  { id: "tag", label: "Tag", width: 230 },
+];
+
+function sentCellText(r, id) {
+  return id === "instance" ? INSTANCE : id === "emailId" ? String(r.id) : String(r[id] ?? "");
+}
+
+// ---------- Subscriptions register ----------
+// Cynthia's "one screen showing every alert the team is subscribed to".
+// A row is one recipient on one alert at one scope, so both of her questions
+// are filters on the same table: filter Recipient to see a person's alerts,
+// filter Alert to see everyone on it.
+function flattenSubscriptions(store) {
+  const out = [];
+  CATALOG.forEach((f) => {
+    (store[f.id] || []).forEach((sub) => {
+      const covered = locationsForReg(f.reg).map((l) => l.id);
+      const resolved = resolveScope(sub.scope, covered);
+      // Regions this subscription actually reaches, resolved from its scope.
+      // "All locations" covers every region, so a region filter must match it —
+      // text-matching the scope label would miss those.
+      const regionNames = REGIONS
+        .filter((rg) => resolved.some((id) => locById(id).region === rg.id))
+        .map((rg) => rg.name);
+      sub.recipients.forEach((r) => {
+        out.push({
+          key: `${sub.id}::${r}`,
+          recipient: r,
+          family: f,
+          subId: sub.id,
+          scope: sub.scope,
+          scopeText: scopeLabel(sub.scope, covered),
+          regions: regionNames,
+          locationCount: resolved.length,
+          bands: f.bands.filter((b) => sub.bands[b]),
+          status: sub.status,
+        });
+      });
+    });
+  });
+  return out;
+}
+
+function ViewTab({ label, active, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        ...TYPE.buttonMedium, textTransform: "none", minHeight: 48, padding: "0 16px",
+        border: "none", background: "transparent", cursor: "pointer", whiteSpace: "nowrap",
+        borderBottom: `2px solid ${active ? T.primaryMain : "transparent"}`,
+        color: active ? T.primaryMain : T.textSecondary, marginBottom: -1,
+        display: "inline-flex", alignItems: "center", gap: 8,
+      }}
+    >
+      {label}
+    </button>
+  );
+}
+
+// Column definitions shared by the header, the rows and the COLUMNS menu, so
+// hiding a column can't desynchronise them.
+const COLUMN_DEFS = [
+  { id: "recipient", label: "Recipient", width: 280 },
+  { id: "alert", label: "Alert", width: 240 },
+  { id: "regulation", label: "Regulation", width: 140 },
+  { id: "scope", label: "Scope", width: 190 },
+  { id: "regions", label: "Regions covered", width: 210 },
+  { id: "bands", label: "Notify when", width: 190 },
+  { id: "status", label: "Status", width: 110 },
+];
+
+const FILTER_OPS = [
+  { id: "contains", label: "contains" },
+  { id: "equals", label: "equals" },
+  { id: "startsWith", label: "starts with" },
+  { id: "isEmpty", label: "is empty", noValue: true },
+  { id: "isNotEmpty", label: "is not empty", noValue: true },
+];
+
+function subCellText(r, id) {
+  return id === "recipient" ? r.recipient
+    : id === "alert" ? r.family.base
+    : id === "regulation" ? r.family.reg
+    : id === "scope" ? r.scopeText
+    : id === "regions" ? r.regions.join(", ")
+    : id === "bands" ? r.bands.join(", ")
+    : r.status === "paused" ? "Paused" : "Active";
+}
+
+function ruleMatches(r, rule, cellFn = subCellText) {
+  const cell = String(cellFn(r, rule.col) || "").toLowerCase();
+  const v = String(rule.value || "").trim().toLowerCase();
+  if (rule.op === "isEmpty") return cell.length === 0;
+  if (rule.op === "isNotEmpty") return cell.length > 0;
+  if (!v) return true; // an unfilled rule filters nothing, as in MUI
+  if (rule.op === "equals") return cell === v;
+  if (rule.op === "startsWith") return cell.startsWith(v);
+  return cell.includes(v);
+}
+
+function exportSubscriptionsCsv(rows, hidden) {
+  const cols = COLUMN_DEFS.filter((c) => !hidden.includes(c.id));
+  const esc = (v) => `"${String(v).replace(/"/g, '""')}"`;
+  const csv = [
+    cols.map((c) => esc(c.label)).join(","),
+    ...rows.map((r) => cols.map((c) => esc(subCellText(r, c.id))).join(",")),
+  ].join("\n");
+
+  const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8;" }));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `alert-subscriptions-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function GridCell({ children, width, align, style }) {
+  return (
+    <div style={{
+      width, flex: width ? "0 0 auto" : 1, minWidth: 0,
+      height: "100%", display: "flex", alignItems: "center",
+      justifyContent: align === "right" ? "flex-end" : "flex-start",
+      padding: "0 10px", boxSizing: "border-box",
+      ...style,
+    }}>
+      {children}
+    </div>
+  );
+}
+
+// MUI DataGrid column header: uppercase grey label, column menu affordance,
+// and the TRGrey-2 separator that runs the height of the grid.
+function SubTableHeader({ label, width }) {
+  return (
+    <GridCell width={width}>
+      <span style={{
+        ...TYPE.tableHeader, color: T.textSecondary,
+        flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+      }}>
+        {label}
+      </span>
+      <MIcon name="more_vert" size={16} color="rgba(26,23,59,0.38)" />
+    </GridCell>
+  );
+}
+
+// Underline-style select, matching the MUI filter panel's Columns / Operator
+// fields: teal label above, value with a teal underline.
+function UnderlineSelect({ label, value, options, onChange, width }) {
+  const [open, setOpen] = useState(false);
+  const sel = options.find((o) => o.id === value);
+  return (
+    <div style={{ width, flexShrink: 0, position: "relative" }}>
+      <div style={{ ...TYPE.caption, color: T.primaryMain, fontWeight: 600, marginBottom: 2 }}>{label}</div>
+      <button
+        onClick={() => setOpen(!open)}
+        style={{
+          ...TYPE.inputValue, width: "100%", height: 32, padding: "0 2px", textAlign: "left",
+          border: "none", borderBottom: `1px solid ${T.outlined}`, background: "transparent",
+          color: T.textPrimary, cursor: "pointer", display: "flex", alignItems: "center", gap: 4,
+        }}
+      >
+        <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {sel ? sel.label : ""}
+        </span>
+        <ChevronDown size={18} color={T.textSecondary} />
+      </button>
+      {open && (
+        <>
+          <div onClick={() => setOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 50 }} />
+          <div style={{
+            position: "absolute", top: 58, left: 0, right: 0, zIndex: 51, backgroundColor: T.bgDefault,
+            borderRadius: 4, boxShadow: SHADOW.e8, padding: "8px 0", maxHeight: 260, overflowY: "auto",
+          }}>
+            {options.map((o) => (
+              <div
+                key={o.id}
+                onClick={() => { onChange(o.id); setOpen(false); }}
+                style={{
+                  ...TYPE.menuItemDense, padding: "6px 16px", cursor: "pointer", color: T.textPrimary,
+                  backgroundColor: o.id === value ? T.primarySelected : "transparent",
+                }}
+                onMouseEnter={(e) => { if (o.id !== value) e.currentTarget.style.backgroundColor = T.actionHover; }}
+                onMouseLeave={(e) => { if (o.id !== value) e.currentTarget.style.backgroundColor = "transparent"; }}
+              >
+                {o.label}
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function EmailPreview({ row, onClose }) {
+  const L = { ...TYPE.body1, color: T.textPrimary, lineHeight: 1.6, margin: 0 };
+  const Link = ({ children }) => (
+    <span style={{ color: "#1155CC", textDecoration: "underline", cursor: "pointer" }}>{children}</span>
+  );
+  const Gap = () => <div style={{ height: 16 }} />;
+
+  const fam = row.type.startsWith("WA") ? "WA" : row.type.includes("AIM") ? "AIM" : "EPA";
+  const citation = SENT_DETAIL.citation[fam];
+  const assetType = SENT_DETAIL.assetType[row.type] || "Comfort Cooling";
+  const alertName = row.subject.split(" — ")[0];
+  const title = `${alertName}, ${row.assetName}, ${row.region}, ${row.location}`;
+  const leadline = row.avg
+    ? `The leak rate for this appliance has exceeded ${citation}`
+    : row.subject.toLowerCase().includes("approaching")
+      ? `The leak rate for this appliance is approaching ${citation}`
+      : `This appliance requires attention under ${citation}`;
+
+  return (
+    <>
+      <div onClick={onClose} style={{ position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.5)", zIndex: 90 }} />
+      <div style={{
+        position: "fixed", top: 24, left: "50%", transform: "translateX(-50%)", zIndex: 91,
+        width: "min(900px, calc(100vw - 48px))", maxHeight: "calc(100vh - 48px)",
+        backgroundColor: T.bgDefault, borderRadius: 4, boxShadow: SHADOW.e8,
+        display: "flex", flexDirection: "column",
+      }}>
+        <div style={{ display: "flex", alignItems: "flex-start", padding: "24px 24px 0" }}>
+          <h2 style={{ ...TYPE.h5, color: T.textSecondary, margin: 0, flex: 1, minWidth: 0 }}>{title}</h2>
+          <button
+            onClick={onClose}
+            style={{
+              border: "none", background: T.grey100, cursor: "pointer", padding: "8px 12px",
+              color: T.textPrimary, fontSize: 22, lineHeight: 1, marginTop: -8, marginRight: -8,
+            }}
+          >
+            ✕
+          </button>
+        </div>
+
+        <div style={{ padding: "12px 24px 16px" }}>
+          {[["From", "notifications@trakref.com"], ["To", row.to], ...(row.cc ? [["Cc", row.cc]] : []), ["Sent", row.at]].map(([k, v]) => (
+            <div key={k} style={{ ...TYPE.body1, color: T.textSecondary, lineHeight: 1.7 }}>{k}: {v}</div>
+          ))}
+        </div>
+
+        <div style={{ padding: "0 24px 24px", overflowY: "auto" }}>
+          <div style={{ border: `1px solid ${T.divider}`, borderRadius: 4, padding: 32 }}>
+            <p style={L}>{leadline}</p>
+            <Gap />
+            <p style={L}>Asset: {row.assetName} ({row.assetId})</p>
+            <p style={L}>Asset Type: {assetType}</p>
+            {row.avg && <p style={L}>12 Month Average Leak Rate: {row.avg}</p>}
+            {!row.avg && row.threshold !== "—" && <p style={L}>Threshold: {row.threshold}</p>}
+            <Gap />
+            <p style={{ ...L, fontWeight: 700 }}>Most Recently Modified Service Event</p>
+            <p style={L}>Service Event ID: <Link>{row.se}</Link></p>
+            <p style={L}>Work Order: <Link>{row.wo}</Link></p>
+            <p style={L}>Date of Service: {row.dos}</p>
+            <p style={L}>Net Gas Added: {row.gas}</p>
+            <Gap />
+            <p style={L}>Store Name: <Link>{row.location}</Link></p>
+            <p style={L}>Store Physical Address: {row.addr}</p>
+            <Gap />
+            <p style={L}>
+              This is a Tag Driven Alert. One email is sent on the next scheduled run after the
+              leak rate exceedance tag is applied. You will not receive duplicate alerts for the same tag.
+            </p>
+            <Gap />
+            <p style={L}>You are receiving this alert from the Trakref Compliance Assistant. Thank you.</p>
+            <Gap />
+            <p style={L}>Alert Name: {alertName}</p>
+            <p style={L}>Alert Type: Tag Driven</p>
+            <p style={L}>Alert Version: 2.2</p>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function AlertsSentView() {
+  const [search, setSearch] = useState("");
+  const [rules, setRules] = useState([]);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [colsOpen, setColsOpen] = useState(false);
+  const [hidden, setHidden] = useState([]);
+  const [page, setPage] = useState(0);
+  const [perPage, setPerPage] = useState(10);
+  const [perPageOpen, setPerPageOpen] = useState(false);
+  const [preview, setPreview] = useState(null);
+
+  const isOn = (id) => !hidden.includes(id);
+  const cols = SENT_COLUMN_DEFS.filter((c) => isOn(c.id));
+
+  const rows = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return SENT_LOG
+      .filter((r) => rules.every((rule) => ruleMatches(r, rule, sentCellText)))
+      .filter((r) => !q || SENT_COLUMN_DEFS.some((c) => String(sentCellText(r, c.id) || "").toLowerCase().includes(q)));
+  }, [rules, search]);
+  const liveRules = rules.filter((r) => {
+    const op = FILTER_OPS.find((o) => o.id === r.op);
+    return op?.noValue || String(r.value || "").trim().length > 0;
+  });
+
+  const addRule = () => setRules((rs) => [...rs, { id: nextId(), col: "to", op: "contains", value: "" }]);
+  const setRule = (id, patch) => { setRules((rs) => rs.map((r) => r.id === id ? { ...r, ...patch } : r)); setPage(0); };
+  const dropRule = (id) => { setRules((rs) => rs.filter((r) => r.id !== id)); setPage(0); };
+
+  const pageCount = Math.max(1, Math.ceil(rows.length / perPage));
+  const safePage = Math.min(page, pageCount - 1);
+  const pageRows = rows.slice(safePage * perPage, safePage * perPage + perPage);
+  const first = rows.length === 0 ? 0 : safePage * perPage + 1;
+  const last = Math.min(rows.length, (safePage + 1) * perPage);
+
+  const PagerBtn = ({ icon, disabled, onClick, title }) => (
+    <IconButton title={title} onClick={disabled ? undefined : onClick}
+      style={{ opacity: disabled ? 0.35 : 1, cursor: disabled ? "default" : "pointer" }}>
+      <MIcon name={icon} size={20} />
+    </IconButton>
+  );
+
+  const gridWidth = cols.reduce((n, c) => n + c.width, 0) + 56;
+
+  return (
+    <div style={{ backgroundColor: T.bgDefault, borderRadius: 4, boxShadow: SHADOW.e2, minHeight: 480, position: "relative" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 4, padding: "8px 16px" }}>
+        <div style={{ position: "relative" }}>
+          <GridToolbarButton
+            icon="view_column"
+            label={hidden.length > 0 ? `Columns (${cols.length})` : "Columns"}
+            active={colsOpen || hidden.length > 0}
+            onClick={() => setColsOpen(!colsOpen)}
+          />
+          {colsOpen && (
+            <>
+              <div onClick={() => setColsOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 30 }} />
+              <div style={{
+                position: "absolute", top: 40, left: 0, zIndex: 31, minWidth: 240, maxHeight: 320, overflowY: "auto",
+                backgroundColor: T.bgDefault, borderRadius: 4, boxShadow: SHADOW.e8, padding: "8px 0",
+              }}>
+                {SENT_COLUMN_DEFS.map((c) => (
+                  <div key={c.id}
+                    onClick={() => setHidden((h) => h.includes(c.id) ? h.filter((x) => x !== c.id) : [...h, c.id])}
+                    style={{ ...TYPE.menuItemDense, display: "flex", alignItems: "center", gap: 10, padding: "6px 16px", cursor: "pointer", color: T.textPrimary }}
+                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = T.actionHover; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
+                  >
+                    <MiniCheck on={isOn(c.id)} />
+                    {c.label}
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+        <GridToolbarButton
+          icon="filter_list"
+          label={liveRules.length > 0 ? `Filters (${liveRules.length})` : "Filters"}
+          active={filtersOpen || liveRules.length > 0}
+          onClick={() => { if (!filtersOpen && rules.length === 0) addRule(); setFiltersOpen(!filtersOpen); }}
+        />
+        <GridToolbarButton icon="file_upload" label="Export" onClick={() => exportSentCsv(rows, cols)} />
+        <div style={{ flex: 1 }} />
+        {liveRules.length > 0 && (
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            {liveRules.map((r) => {
+              const col = SENT_COLUMN_DEFS.find((c) => c.id === r.col);
+              const op = FILTER_OPS.find((o) => o.id === r.op);
+              return <FilterChip key={r.id} label={op?.noValue ? `${col.label} ${op.label}` : `${col.label}: ${r.value}`} onClear={() => dropRule(r.id)} />;
+            })}
+          </div>
+        )}
+        <GridSearch value={search} onChange={(v) => { setSearch(v); setPage(0); }} placeholder="Search by recipient, subject, asset, or location…" />
+      </div>
+
+
+      {filtersOpen && (
+        <>
+          <div onClick={() => setFiltersOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 40 }} />
+          <div style={{
+            position: "absolute", marginTop: -4, marginLeft: 16, zIndex: 41,
+            backgroundColor: T.bgDefault, borderRadius: 4, boxShadow: SHADOW.e8, padding: 16, minWidth: 620,
+          }}>
+            {rules.map((rule) => {
+              const op = FILTER_OPS.find((o) => o.id === rule.op);
+              return (
+                <div key={rule.id} style={{ display: "flex", alignItems: "flex-end", gap: 12, marginBottom: 12 }}>
+                  <IconButton title="Remove filter" onClick={() => dropRule(rule.id)}><X size={20} /></IconButton>
+                  <UnderlineSelect label="Columns" value={rule.col} width={180}
+                    options={SENT_COLUMN_DEFS.map((c) => ({ id: c.id, label: c.label }))}
+                    onChange={(v) => setRule(rule.id, { col: v })} />
+                  <UnderlineSelect label="Operator" value={rule.op} width={150}
+                    options={FILTER_OPS.map((o) => ({ id: o.id, label: o.label }))}
+                    onChange={(v) => setRule(rule.id, { op: v })} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ ...TYPE.caption, color: T.primaryMain, fontWeight: 600, marginBottom: 2 }}>Value</div>
+                    <input
+                      value={op?.noValue ? "" : rule.value}
+                      disabled={op?.noValue}
+                      onChange={(e) => setRule(rule.id, { value: e.target.value })}
+                      placeholder={op?.noValue ? "—" : "Filter value"}
+                      style={{
+                        ...TYPE.inputValue, width: "100%", height: 32, padding: "0 2px", boxSizing: "border-box",
+                        border: "none", borderBottom: `1px solid ${T.primaryMain}`, outline: "none",
+                        backgroundColor: "transparent", color: op?.noValue ? T.textDisabled : T.textPrimary,
+                      }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+            <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 4 }}>
+              <GridToolbarButton icon="add" label="Add filter" onClick={addRule} />
+              <div style={{ flex: 1 }} />
+              {rules.length > 0 && <GridToolbarButton icon="delete" label="Remove all" onClick={() => { setRules([]); setPage(0); }} />}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Wide log — scrolls horizontally, as the live page does */}
+      <div style={{ overflowX: "auto" }}>
+        <div style={{ minWidth: gridWidth }}>
+          <div style={{
+            display: "flex", alignItems: "stretch", height: 48,
+            borderTop: `1px solid ${T.grey200}`, borderBottom: `1px solid ${T.grey200}`,
+          }}>
+            {cols.map((c) => <SubTableHeader key={c.id} label={c.label} width={c.width} />)}
+            <GridCell width={56} />
+          </div>
+
+          {pageRows.length === 0 ? (
+            <div style={{ ...TYPE.body2, padding: 48, textAlign: "center", color: T.textSecondary, borderBottom: `1px solid ${T.grey200}` }}>
+              No sent alerts match. Try clearing the filters.
+            </div>
+          ) : pageRows.map((r, i) => (
+            <div key={r.id} style={{
+              display: "flex", alignItems: "stretch", height: 52,
+              borderBottom: `1px solid ${T.grey200}`,
+              backgroundColor: i % 2 === 1 ? T.grey50 : T.bgDefault,
+            }}>
+              {cols.map((c) => {
+                // Instance is the first column and opens the email, matching
+                // how the first column opens the record elsewhere in Trakref.
+                const isLink = c.id === "instance";
+                return (
+                  <GridCell key={c.id} width={c.width}>
+                    <span
+                      title={isLink ? "View the email that was sent" : sentCellText(r, c.id)}
+                      onClick={isLink ? () => setPreview(r) : undefined}
+                      style={{
+                        ...TYPE.body2,
+                        color: isLink ? T.primaryMain : T.textPrimary,
+                        cursor: isLink ? "pointer" : "default",
+                        overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                      }}
+                    >
+                      {sentCellText(r, c.id) || "—"}
+                    </span>
+                  </GridCell>
+                );
+              })}
+              <GridCell width={56}>
+                <IconButton title="View the email that was sent" onClick={() => setPreview(r)}>
+                  <MIcon name="visibility" size={20} />
+                </IconButton>
+              </GridCell>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div style={{
+        display: "flex", alignItems: "center", justifyContent: "center", gap: 16,
+        minHeight: 56, padding: "0 16px", borderTop: `1px solid ${T.grey200}`,
+      }}>
+        <span style={{ ...TYPE.subtitle2, fontWeight: 600, color: T.textPrimary }}>Rows per page:</span>
+        <div style={{ position: "relative" }}>
+          <button onClick={() => setPerPageOpen(!perPageOpen)}
+            style={{ ...TYPE.body2, display: "inline-flex", alignItems: "center", gap: 4, border: "none", background: "transparent", cursor: "pointer", color: T.textPrimary }}>
+            {perPage}
+            <ChevronDown size={18} color={T.textSecondary} style={{ transform: perPageOpen ? "rotate(180deg)" : "none" }} />
+          </button>
+          {perPageOpen && (
+            <>
+              <div onClick={() => setPerPageOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 30 }} />
+              <div style={{ position: "absolute", bottom: 28, left: -8, zIndex: 31, backgroundColor: T.bgDefault, borderRadius: 4, boxShadow: SHADOW.e8, padding: "4px 0", minWidth: 64 }}>
+                {[10, 25, 50].map((n) => (
+                  <div key={n} onClick={() => { setPerPage(n); setPage(0); setPerPageOpen(false); }}
+                    style={{ ...TYPE.menuItemDense, padding: "6px 16px", cursor: "pointer", color: T.textPrimary, backgroundColor: n === perPage ? T.primarySelected : "transparent" }}>
+                    {n}
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+        <span style={{ ...TYPE.body2, fontWeight: 600, color: T.textPrimary }}>{first}–{last} of {rows.length}</span>
+        <div style={{ display: "flex", alignItems: "center" }}>
+          <PagerBtn icon="first_page" title="First page" disabled={safePage === 0} onClick={() => setPage(0)} />
+          <PagerBtn icon="chevron_left" title="Previous page" disabled={safePage === 0} onClick={() => setPage(safePage - 1)} />
+          <PagerBtn icon="chevron_right" title="Next page" disabled={safePage >= pageCount - 1} onClick={() => setPage(safePage + 1)} />
+          <PagerBtn icon="last_page" title="Last page" disabled={safePage >= pageCount - 1} onClick={() => setPage(pageCount - 1)} />
+        </div>
+      </div>
+
+      {preview && <EmailPreview row={preview} onClose={() => setPreview(null)} />}
+    </div>
+  );
+}
+
+function exportSentCsv(rows, cols) {
+  const esc = (v) => `"${String(v).replace(/"/g, '""')}"`;
+  const csv = [
+    cols.map((c) => esc(c.label)).join(","),
+    ...rows.map((r) => cols.map((c) => esc(sentCellText(r, c.id))).join(",")),
+  ].join("\n");
+  const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8;" }));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `alerts-sent-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function SubscriptionsView({ store, onOpenAlert, onUnsubscribe, seedRule, onSeedConsumed }) {
+  const [search, setSearch] = useState("");
+  const [rules, setRules] = useState(seedRule ? [{ id: nextId(), ...seedRule }] : []);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  // A query handed over from the Alerts tab arrives as a filter rule
+  React.useEffect(() => {
+    if (seedRule) { setRules([{ id: nextId(), ...seedRule }]); onSeedConsumed?.(); }
+  }, [seedRule]);
+  const [selected, setSelected] = useState([]);
+  const [page, setPage] = useState(0);
+  const [perPage, setPerPage] = useState(10);
+  const [perPageOpen, setPerPageOpen] = useState(false);
+  const [colsOpen, setColsOpen] = useState(false);
+  const [hidden, setHidden] = useState([]);
+  const isOn = (id) => !hidden.includes(id);
+  const toggleCol = (id) => setHidden((h) => h.includes(id) ? h.filter((x) => x !== id) : [...h, id]);
+
+  const all = useMemo(() => flattenSubscriptions(store), [store]);
+  const rows = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return all
+      .filter((r) => rules.every((rule) => ruleMatches(r, rule)))
+      .filter((r) => !q || COLUMN_DEFS.some((c) => String(subCellText(r, c.id) || "").toLowerCase().includes(q)));
+  }, [all, rules, search]);
+
+  const liveRules = rules.filter((r) => {
+    const op = FILTER_OPS.find((o) => o.id === r.op);
+    return op?.noValue || String(r.value || "").trim().length > 0;
+  });
+
+  const addRule = () => setRules((rs) => [...rs, { id: nextId(), col: "recipient", op: "contains", value: "" }]);
+  const setRule = (id, patch) => { setRules((rs) => rs.map((r) => r.id === id ? { ...r, ...patch } : r)); setPage(0); };
+  const dropRule = (id) => { setRules((rs) => rs.filter((r) => r.id !== id)); setPage(0); };
+  // Clicking a recipient in a row applies it as a filter rule
+  const setRecipient = (email) => {
+    setRules([{ id: nextId(), col: "recipient", op: "equals", value: email }]);
+    setPage(0);
+  };
+
+  const pageCount = Math.max(1, Math.ceil(rows.length / perPage));
+  const safePage = Math.min(page, pageCount - 1);
+  const pageRows = rows.slice(safePage * perPage, safePage * perPage + perPage);
+  const first = rows.length === 0 ? 0 : safePage * perPage + 1;
+  const last = Math.min(rows.length, (safePage + 1) * perPage);
+
+  const activeFilters = liveRules.length;
+
+  const toggle = (k) => setSelected((s) => s.includes(k) ? s.filter((x) => x !== k) : [...s, k]);
+  const allSel = pageRows.length > 0 && pageRows.every((r) => selected.includes(r.key));
+
+  const PagerBtn = ({ icon, disabled, onClick, title }) => (
+    <IconButton title={title} onClick={disabled ? undefined : onClick}
+      style={{ opacity: disabled ? 0.35 : 1, cursor: disabled ? "default" : "pointer" }}>
+      <MIcon name={icon} size={20} />
+    </IconButton>
+  );
+
+  return (
+    <div style={{ backgroundColor: T.bgDefault, borderRadius: 4, boxShadow: SHADOW.e2, minHeight: 480, position: "relative" }}>
+      {/* Toolbar — the Trakref data-grid pattern (Manage Users, Home). No EXPORT:
+          Cynthia asked not to lead with it; it goes in the discovery script instead. */}
+      <div style={{ display: "flex", alignItems: "center", gap: 4, padding: "8px 16px" }}>
+        <div style={{ position: "relative" }}>
+          <GridToolbarButton
+            icon="view_column"
+            label={hidden.length > 0 ? `Columns (${COLUMN_DEFS.length - hidden.length})` : "Columns"}
+            active={colsOpen || hidden.length > 0}
+            onClick={() => setColsOpen(!colsOpen)}
+          />
+          {colsOpen && (
+            <>
+              <div onClick={() => setColsOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 30 }} />
+              <div style={{
+                position: "absolute", top: 40, left: 0, zIndex: 31, minWidth: 220,
+                backgroundColor: T.bgDefault, borderRadius: 4, boxShadow: SHADOW.e8, padding: "8px 0",
+              }}>
+                {COLUMN_DEFS.map((c) => (
+                  <div
+                    key={c.id}
+                    onClick={() => toggleCol(c.id)}
+                    style={{
+                      ...TYPE.menuItemDense, display: "flex", alignItems: "center", gap: 10,
+                      padding: "6px 16px", cursor: "pointer", color: T.textPrimary,
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = T.actionHover; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
+                  >
+                    <MiniCheck on={isOn(c.id)} />
+                    {c.label}
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+        <GridToolbarButton
+          icon="filter_list"
+          label={activeFilters > 0 ? `Filters (${activeFilters})` : "Filters"}
+          active={filtersOpen || activeFilters > 0}
+          onClick={() => { if (!filtersOpen && rules.length === 0) addRule(); setFiltersOpen(!filtersOpen); }}
+        />
+        <GridToolbarButton
+          icon="file_upload"
+          label="Export"
+          onClick={() => exportSubscriptionsCsv(rows, hidden)}
+        />
+        <div style={{ flex: 1 }} />
+        {liveRules.length > 0 && (
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            {liveRules.map((r) => {
+              const col = COLUMN_DEFS.find((c) => c.id === r.col);
+              const op = FILTER_OPS.find((o) => o.id === r.op);
+              return (
+                <FilterChip
+                  key={r.id}
+                  label={op?.noValue ? `${col.label} ${op.label}` : `${col.label}: ${r.value}`}
+                  onClear={() => dropRule(r.id)}
+                />
+              );
+            })}
+          </div>
+        )}
+        <GridSearch value={search} onChange={(v) => { setSearch(v); setPage(0); }} placeholder="Search by email, alert, region, or location…" />
+      </div>
+
+
+      {filtersOpen && (
+        <>
+          <div onClick={() => setFiltersOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 40 }} />
+          <div style={{
+            position: "absolute", marginTop: -4, marginLeft: 16, zIndex: 41,
+            backgroundColor: T.bgDefault, borderRadius: 4, boxShadow: SHADOW.e8,
+            padding: 16, minWidth: 620,
+          }}>
+            {rules.length === 0 && (
+              <div style={{ ...TYPE.body2, color: T.textSecondary, marginBottom: 12 }}>
+                No filters yet. Add one to narrow the list.
+              </div>
+            )}
+
+            {rules.map((rule) => {
+              const op = FILTER_OPS.find((o) => o.id === rule.op);
+              return (
+                <div key={rule.id} style={{ display: "flex", alignItems: "flex-end", gap: 12, marginBottom: 12 }}>
+                  <IconButton title="Remove filter" onClick={() => dropRule(rule.id)}>
+                    <X size={20} />
+                  </IconButton>
+                  <UnderlineSelect
+                    label="Columns"
+                    value={rule.col}
+                    options={COLUMN_DEFS.map((c) => ({ id: c.id, label: c.label }))}
+                    onChange={(v) => setRule(rule.id, { col: v })}
+                    width={180}
+                  />
+                  <UnderlineSelect
+                    label="Operator"
+                    value={rule.op}
+                    options={FILTER_OPS.map((o) => ({ id: o.id, label: o.label }))}
+                    onChange={(v) => setRule(rule.id, { op: v })}
+                    width={150}
+                  />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ ...TYPE.caption, color: T.primaryMain, fontWeight: 600, marginBottom: 2 }}>Value</div>
+                    <input
+                      value={op?.noValue ? "" : rule.value}
+                      disabled={op?.noValue}
+                      onChange={(e) => setRule(rule.id, { value: e.target.value })}
+                      placeholder={op?.noValue ? "—" : "Filter value"}
+                      style={{
+                        ...TYPE.inputValue, width: "100%", height: 32, padding: "0 2px", boxSizing: "border-box",
+                        border: "none", borderBottom: `1px solid ${T.primaryMain}`, outline: "none",
+                        backgroundColor: "transparent",
+                        color: op?.noValue ? T.textDisabled : T.textPrimary,
+                      }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+
+            <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 4 }}>
+              <GridToolbarButton icon="add" label="Add filter" onClick={addRule} />
+              <div style={{ flex: 1 }} />
+              {rules.length > 0 && (
+                <GridToolbarButton icon="delete" label="Remove all" onClick={() => { setRules([]); setPage(0); }} />
+              )}
+            </div>
+          </div>
+        </>
+      )}
+
+      {selected.length > 0 && (
+        <div style={{
+          display: "flex", alignItems: "center", gap: 16, padding: "12px 16px",
+          backgroundColor: T.primarySelected, borderBottom: `1px solid ${T.divider}`,
+        }}>
+          <span style={{ ...TYPE.subtitle2, color: T.primaryDark }}>{selected.length} selected</span>
+          <div style={{ flex: 1 }} />
+          <Button onClick={() => setSelected([])}>Cancel</Button>
+          <Button
+            variant="contained"
+            onClick={() => { onUnsubscribe(rows.filter((r) => selected.includes(r.key))); setSelected([]); }}
+          >
+            Unsubscribe
+          </Button>
+        </div>
+      )}
+
+      <div style={{ overflowX: "auto" }}>
+      <div style={{ minWidth: COLUMN_DEFS.filter((c) => isOn(c.id)).reduce((n, c) => n + c.width, 48) }}>
+      <div style={{
+        display: "flex", alignItems: "stretch", height: 48,
+        borderTop: `1px solid ${T.grey200}`, borderBottom: `1px solid ${T.grey200}`,
+      }}>
+        <GridCell width={48}>
+          <div
+            onClick={() => setSelected(allSel ? selected.filter((k) => !pageRows.some((r) => r.key === k)) : [...new Set([...selected, ...pageRows.map((r) => r.key)])])}
+            style={{ cursor: "pointer", display: "flex" }}
+          >
+            <MiniCheck on={allSel} />
+          </div>
+        </GridCell>
+        {COLUMN_DEFS.filter((c) => isOn(c.id)).map((c) => (
+          <SubTableHeader key={c.id} label={c.label} width={c.width} />
+        ))}
+      </div>
+
+      {pageRows.length === 0 ? (
+        <div style={{ ...TYPE.body2, padding: 48, textAlign: "center", color: T.textSecondary, borderBottom: `1px solid ${T.grey200}` }}>
+          No subscriptions match. Try clearing the filters.
+        </div>
+      ) : pageRows.map((r, i) => {
+        const isSel = selected.includes(r.key);
+        return (
+          <div
+            key={r.key}
+            style={{
+              display: "flex", alignItems: "stretch", height: 52,
+              borderBottom: `1px solid ${T.grey200}`,
+              backgroundColor: isSel ? T.primarySelected : (i % 2 === 1 ? T.grey50 : T.bgDefault),
+            }}
+            onMouseEnter={(e) => { if (!isSel) e.currentTarget.style.backgroundColor = T.actionHover; }}
+            onMouseLeave={(e) => { if (!isSel) e.currentTarget.style.backgroundColor = i % 2 === 1 ? T.grey50 : T.bgDefault; }}
+          >
+            <GridCell width={48}>
+              <div onClick={() => toggle(r.key)} style={{ cursor: "pointer", display: "flex" }}>
+                <MiniCheck on={isSel} />
+              </div>
+            </GridCell>
+
+            {COLUMN_DEFS.filter((c) => isOn(c.id)).map((c) => {
+              const ell = { overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" };
+              if (c.id === "recipient") return (
+                <GridCell key={c.id}>
+                  <span onClick={() => setRecipient(r.recipient)} title={r.recipient}
+                    style={{ ...TYPE.body2, color: T.primaryMain, cursor: "pointer", ...ell }}>
+                    {r.recipient}
+                  </span>
+                </GridCell>
+              );
+              if (c.id === "alert") return (
+                <GridCell key={c.id}>
+                  <span onClick={() => onOpenAlert(r.family)} title={r.family.base}
+                    style={{ ...TYPE.body2, color: T.primaryMain, cursor: "pointer", ...ell }}>
+                    {r.family.base}
+                  </span>
+                </GridCell>
+              );
+              if (c.id === "regulation") return (
+                <GridCell key={c.id} width={c.width}>
+                  <span style={{ ...TYPE.body2, color: T.textPrimary, ...ell }}>{r.family.reg}</span>
+                </GridCell>
+              );
+              if (c.id === "scope") return (
+                <GridCell key={c.id} width={c.width}>
+                  <span
+                    title={r.scope?.mode === "locations" ? "Fixed list — new sites are not covered" : undefined}
+                    style={{ ...TYPE.body2, color: r.scope?.mode === "locations" ? T.warningMain : T.textPrimary, ...ell }}
+                  >
+                    {r.scopeText}
+                  </span>
+                </GridCell>
+              );
+              if (c.id === "regions") return (
+                <GridCell key={c.id} width={c.width}>
+                  <span title={r.regions.join(", ")} style={{ ...TYPE.body2, color: T.textPrimary, ...ell }}>
+                    {r.regions.length === REGIONS.length ? `All regions (${REGIONS.length})` : r.regions.join(", ")}
+                  </span>
+                </GridCell>
+              );
+              if (c.id === "bands") return (
+                <GridCell key={c.id} width={c.width}>
+                  <span style={{ ...TYPE.body2, color: T.textPrimary, ...ell }}>{r.bands.join(", ")}</span>
+                </GridCell>
+              );
+              return (
+                <GridCell key={c.id} width={c.width}>
+                  <span style={{ ...TYPE.body2, color: r.status === "paused" ? T.textSecondary : T.textPrimary }}>
+                    {r.status === "paused" ? "Paused" : "Active"}
+                  </span>
+                </GridCell>
+              );
+            })}
+          </div>
+        );
+      })}
+
+      </div>
+      </div>
+
+      {/* Pagination footer — Trakref's: Rows per page · 1–10 of N · |< < > >| */}
+      <div style={{
+        display: "flex", alignItems: "center", justifyContent: "center", gap: 16,
+        minHeight: 56, padding: "0 16px", borderTop: `1px solid ${T.grey200}`,
+      }}>
+        <span style={{ ...TYPE.subtitle2, fontWeight: 600, color: T.textPrimary }}>Rows per page:</span>
+        <div style={{ position: "relative" }}>
+          <button
+            onClick={() => setPerPageOpen(!perPageOpen)}
+            style={{
+              ...TYPE.body2, display: "inline-flex", alignItems: "center", gap: 4,
+              border: "none", background: "transparent", cursor: "pointer", color: T.textPrimary,
+            }}
+          >
+            {perPage}
+            <ChevronDown size={18} color={T.textSecondary} style={{ transform: perPageOpen ? "rotate(180deg)" : "none" }} />
+          </button>
+          {perPageOpen && (
+            <>
+              <div onClick={() => setPerPageOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 30 }} />
+              <div style={{
+                position: "absolute", bottom: 28, left: -8, zIndex: 31, backgroundColor: T.bgDefault,
+                borderRadius: 4, boxShadow: SHADOW.e8, padding: "4px 0", minWidth: 64,
+              }}>
+                {[10, 25, 50].map((n) => (
+                  <div
+                    key={n}
+                    onClick={() => { setPerPage(n); setPage(0); setPerPageOpen(false); }}
+                    style={{
+                      ...TYPE.menuItemDense, padding: "6px 16px", cursor: "pointer", color: T.textPrimary,
+                      backgroundColor: n === perPage ? T.primarySelected : "transparent",
+                    }}
+                  >
+                    {n}
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+        <span style={{ ...TYPE.body2, fontWeight: 600, color: T.textPrimary }}>
+          {first}–{last} of {rows.length}
+        </span>
+        <div style={{ display: "flex", alignItems: "center" }}>
+          <PagerBtn icon="first_page" title="First page" disabled={safePage === 0} onClick={() => setPage(0)} />
+          <PagerBtn icon="chevron_left" title="Previous page" disabled={safePage === 0} onClick={() => setPage(safePage - 1)} />
+          <PagerBtn icon="chevron_right" title="Next page" disabled={safePage >= pageCount - 1} onClick={() => setPage(safePage + 1)} />
+          <PagerBtn icon="last_page" title="Last page" disabled={safePage >= pageCount - 1} onClick={() => setPage(pageCount - 1)} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// V3: the toolbar Trakref already uses above its data grids (Work Orders →
+// Service Events tab): COLUMNS / FILTERS as text buttons, filters in a panel.
+// Shared table search, matching the Alerts list. Free text across every column.
+function GridSearch({ value, onChange, placeholder }) {
+  return (
+    <div style={{
+      display: "flex", alignItems: "center", gap: 8,
+      height: 40, padding: "0 12px", boxSizing: "border-box",
+      border: `1px solid ${T.outlined}`, borderRadius: 4,
+      flex: "1 1 320px", maxWidth: 440, backgroundColor: T.bgDefault,
+    }}>
+      <Search size={20} color={T.textSecondary} />
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        style={{ ...TYPE.body2, flex: 1, minWidth: 0, border: "none", outline: "none", color: T.textPrimary, backgroundColor: "transparent" }}
+      />
+      {value && <IconButton onClick={() => onChange("")}><X size={16} /></IconButton>}
+    </div>
+  );
+}
+
+function GridColHeader({ label, align }) {
+  return (
+    <div style={{
+      display: "flex", alignItems: "center", gap: 4,
+      justifyContent: align === "right" ? "flex-end" : "flex-start",
+    }}>
+      <span style={{ ...TYPE.tableHeader, color: T.textSecondary, fontSize: 13 }}>{label}</span>
+      <MIcon name="more_vert" size={16} color="rgba(26,23,59,0.38)" />
+    </div>
+  );
+}
+
+function GridToolbarButton({ icon, label, onClick, active }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        ...TYPE.buttonMedium, display: "inline-flex", alignItems: "center", gap: 8,
+        height: 34, padding: "0 8px", border: "none", borderRadius: 4, cursor: "pointer",
+        backgroundColor: active ? T.primarySelected : "transparent",
+        color: active ? T.primaryDark : T.primaryMain,
+      }}
+      onMouseEnter={(e) => { if (!active) e.currentTarget.style.backgroundColor = T.actionHover; }}
+      onMouseLeave={(e) => { if (!active) e.currentTarget.style.backgroundColor = "transparent"; }}
+    >
+      <MIcon name={icon} size={20} />
+      {label}
+    </button>
+  );
+}
+
+function FilterChip({ label, onClear }) {
+  return (
+    <span style={{
+      ...TYPE.chipLabel, display: "inline-flex", alignItems: "center", gap: 6,
+      height: 28, padding: "0 6px 0 10px", borderRadius: 14,
+      backgroundColor: T.primarySelected, color: T.primaryDark,
+    }}>
+      {label}
+      <span
+        onClick={onClear}
+        style={{
+          width: 18, height: 18, borderRadius: "50%", cursor: "pointer",
+          display: "inline-flex", alignItems: "center", justifyContent: "center",
+          backgroundColor: "rgba(0,133,155,0.18)",
+        }}
+      >
+        <X size={12} color={T.primaryDark} />
+      </span>
+    </span>
+  );
+}
+
+// Category filter chips. Deliberately NOT the tab treatment — tabs are
+// reserved for the Alerts / Subscriptions view switch, and two stacked
+// underline rows read as one nested tab system.
+function CatChip({ label, active, disabled, onClick }) {
+  return (
+    <button
+      onClick={disabled ? undefined : onClick}
+      disabled={disabled}
+      style={{
+        ...TYPE.chipLabel,
+        display: "inline-flex", alignItems: "center", gap: 6,
+        height: 32, padding: "0 14px", borderRadius: 16,
+        border: `1px solid ${disabled ? T.divider : active ? T.primaryMain : T.grey400}`,
+        backgroundColor: active ? T.primaryMain : "transparent",
+        color: disabled ? T.textDisabled : active ? T.white : T.textPrimary,
+        cursor: disabled ? "default" : "pointer", whiteSpace: "nowrap",
+        transition: "background-color 150ms",
+      }}
+    >
+      {label}
+    </button>
+  );
+}
+
+// ---------- Main ----------
+
+function ManageEmailAlerts() {
+  const model = "B"; // one row per alert; band is a setting inside the subscription
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [railQuery, setRailQuery] = useState("");
+  const [railCollapsed, setRailCollapsed] = useState(false);
+  const [view, setView] = useState("alerts");
+  const [seedRule, setSeedRule] = useState(null);
+  const onFindRecipient = (q) => { setSeedRule({ col: "recipient", op: "contains", value: q }); setView("subs"); };
+  const [store, setStore] = useState(SEED);
+  const [activeReg, setActiveReg] = useState("all");
+  const [activeCat, setActiveCat] = useState("all");
+  const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState([]);
+  const [drawer, setDrawer] = useState(null);
+  const [toast, setToast] = useState(null);
+
+  const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(null), 3000); };
+
+  const regCounts = useMemo(() => {
+    const map = {};
+    REGULATIONS.forEach((r) => {
+      const fams = CATALOG.filter((f) => f.reg === r.id);
+      map[r.id] = {
+        total: fams.length,
+        subscribed: fams.filter((f) => (store[f.id] || []).length > 0).length,
+      };
+    });
+    return map;
+  }, [store]);
+
+  const subscribedTotal = useMemo(
+    () => CATALOG.filter((f) => (store[f.id] || []).length > 0).length,
+    [store]
+  );
+
+  const activeCategories = CATEGORIES;
+
+  const catCounts = useMemo(() => {
+    let base = CATALOG;
+    if (activeReg !== "all") base = base.filter((f) => f.reg === activeReg);
+    const map = { all: base.length };
+    CATEGORIES.forEach((c) => { map[c] = base.filter((f) => f.cat === c).length; });
+    return map;
+  }, [activeReg]);
+
+  const rows = useMemo(() => {
+    let fams = CATALOG;
+    if (activeReg !== "all") fams = fams.filter((f) => f.reg === activeReg);
+    if (activeCat !== "all") fams = fams.filter((f) => f.cat === activeCat);
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      fams = fams.filter((f) =>
+        f.base.toLowerCase().includes(q) || f.cat.toLowerCase().includes(q) || f.reg.toLowerCase().includes(q)
+      );
+    }
+    if (model === "B") return fams.map((f) => ({ family: f, band: null }));
+    const out = [];
+    fams.forEach((f) => f.bands.forEach((b) => out.push({ family: f, band: b })));
+    return out;
+  }, [activeReg, activeCat, search, model, store]);
+
+  // How many subscriptions a free-text query would match by recipient. Drives
+  // the hand-off banner; the Alerts list itself no longer filters on recipients.
+  const emailQueryHint = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (q.length < 2) return 0;
+    return flattenSubscriptions(store).filter((r) => r.recipient.toLowerCase().includes(q)).length;
+  }, [search, store]);
+
+  // Selection keys on family+band so that in per-sub-category mode the
+  // Approaching and Due rows of one alert are two independent selections.
+  const rowKeyOf = (r) => r.family.id + (r.band ? `::${r.band}` : "");
+  const parseRowKey = (key) => {
+    const [familyId, band] = key.split("::");
+    return { family: CATALOG.find((f) => f.id === familyId), band: band || null };
+  };
+  const visibleRowKeys = useMemo(() => rows.map(rowKeyOf), [rows]);
+  const allVisibleSelected = visibleRowKeys.length > 0 && visibleRowKeys.every((k) => selected.includes(k));
+  const toggleSelect = (key) => setSelected((s) => s.includes(key) ? s.filter((x) => x !== key) : [...s, key]);
+  const selectAllVisible = () => setSelected(allVisibleSelected ? [] : visibleRowKeys);
+
+  const handleAlertSave = (familyId, subscriptions) => {
+    setStore((p) => ({ ...p, [familyId]: subscriptions }));
+    setDrawer(null);
+    showToast("Subscriptions have been saved.");
+  };
+
+  // Removing a recipient from the register: drop just that address, and drop
+  // the whole subscription only when it was the last one on it.
+  const handleUnsubscribe = (picked) => {
+    setStore((prev) => {
+      const next = { ...prev };
+      picked.forEach(({ family, subId, recipient }) => {
+        const list = next[family.id] || [];
+        next[family.id] = list
+          .map((sub) => sub.id === subId
+            ? { ...sub, recipients: sub.recipients.filter((r) => r !== recipient) }
+            : sub)
+          .filter((sub) => sub.recipients.length > 0);
+      });
+      return next;
+    });
+    showToast("Subscriptions have been updated.");
+  };
+
+  const handleBatchSave = (items) => {
+    const added = items.filter((i) => !i.skipped);
+    setStore((p) => {
+      const next = { ...p };
+      added.forEach(({ familyId, subscription }) => {
+        next[familyId] = [subscription, ...(next[familyId] || [])];
+      });
+      return next;
+    });
+    setDrawer(null);
+    setSelected([]);
+    const dupes = items.filter((i) => i.duplicate).length;
+    const noLocs = items.length - added.length - dupes;
+    showToast("Subscriptions have been saved.");
+  };
+
+  const activeRegMeta = REGULATIONS.find((r) => r.id === activeReg);
+  const noAssetRegs = REGULATIONS.filter((r) => !r.hasAssets);
+
+  // V4 groups the flat row list into one section per regulation.
+  const renderItems = rows;
+
+  return (
+    <div style={{ fontFamily: FONT, backgroundColor: T.grey50, minHeight: "100vh", color: T.textPrimary }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block');
+        .msym {
+          font-family: 'Material Symbols Outlined';
+          font-weight: normal; font-style: normal; line-height: 1;
+          display: inline-block; text-transform: none !important;
+          letter-spacing: normal !important; white-space: nowrap; word-wrap: normal;
+          direction: ltr; -webkit-font-smoothing: antialiased;
+          flex-shrink: 0; user-select: none;
+        }
+      `}</style>
+      <Header />
+      <div style={{ display: "flex", minHeight: "calc(100vh - 64px)" }}>
+        <Sidebar />
+
+        {/* V5: Trakref's Analytics rail — a page-level column flush against the
+            sidebar, white like it, outside the content card. Faithful copy. */}
+        {!railCollapsed && (
+          <div style={{
+            width: 278, flexShrink: 0, backgroundColor: T.bgDefault,
+            borderRight: `1px solid ${T.divider}`, padding: "24px 0 24px",
+          }}>
+            <div style={{ padding: "0 24px 4px" }}>
+              <input
+                value={railQuery}
+                onChange={(e) => setRailQuery(e.target.value)}
+                placeholder="Search for regulations..."
+                style={{
+                  ...TYPE.inputValue, width: "100%", height: 32, padding: "0 2px",
+                  border: "none", borderBottom: `1px solid ${T.outlined}`,
+                  backgroundColor: "transparent", color: T.textPrimary, outline: "none",
+                  boxSizing: "border-box",
+                }}
+              />
+            </div>
+            <div style={{ paddingTop: 16 }}>
+              {!railQuery && (
+                <AnalyticsRailItem
+                  label="All regulations"
+                  sub={`${CATALOG.length} alerts · ${subscribedTotal} subscribed`}
+                  active={activeReg === "all"}
+                  onClick={() => { setActiveReg("all"); setActiveCat("all"); }}
+                />
+              )}
+              {REGULATIONS
+                .filter((r) => r.id.toLowerCase().includes(railQuery.toLowerCase()))
+                .map((r) => (
+                  <AnalyticsRailItem
+                    key={r.id}
+                    label={r.id}
+                    sub={r.hasAssets
+                      ? `${r.scope} · ${regCounts[r.id].total} alerts · ${regCounts[r.id].subscribed} subscribed`
+                      : `${r.scope} · no assets`}
+                    active={activeReg === r.id}
+                    dimmed={!r.hasAssets}
+                    onClick={() => { setActiveReg(r.id); setActiveCat("all"); }}
+                  />
+                ))}
+            </div>
+          </div>
+        )}
+
+        <div style={{ flex: 1, minWidth: 0, padding: "24px 40px 80px" }}>
+
+          {(
+            <IconButton
+              title={railCollapsed ? "Show regulations" : "Hide regulations"}
+              onClick={() => setRailCollapsed(!railCollapsed)}
+              style={{ marginBottom: 8, marginLeft: -8 }}
+            >
+              <MIcon name={railCollapsed ? "last_page" : "first_page"} size={20} color={T.textSecondary} />
+            </IconButton>
+          )}
+
+          <div style={{ display: "flex", alignItems: "center", ...TYPE.body2, color: T.textSecondary, marginBottom: 8 }}>
+            <span>Account Details</span>
+            <ChevronRight size={16} style={{ margin: "0 4px" }} />
+            <span style={{ color: T.textPrimary }}>Manage Email Alerts</span>
+          </div>
+          <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginBottom: 24, flexWrap: "wrap", gap: 16 }}>
+            <h1 style={{ ...TYPE.h5, color: T.textPrimary, margin: 0 }}>Manage Email Alerts</h1>
+          </div>
+
+          {/* Two views of one record — the Trakref tab pattern used for what it
+              actually means: switching panels, not filtering a list. */}
+          <div style={{
+            display: "flex", alignItems: "center",
+            borderBottom: `1px solid ${T.divider}`, marginBottom: 16,
+          }}>
+            <ViewTab label="Alerts" active={view === "alerts"} onClick={() => setView("alerts")} />
+            <ViewTab label="Subscriptions" active={view === "subs"} onClick={() => setView("subs")} />
+            <ViewTab label="Alerts Sent" active={view === "sent"} onClick={() => setView("sent")} />
+          </div>
+
+          {view === "sent" ? (
+            <AlertsSentView />
+          ) : view === "subs" ? (
+            <SubscriptionsView
+              store={store}
+              seedRule={seedRule}
+              onSeedConsumed={() => setSeedRule(null)}
+              onOpenAlert={(family) => { setView("alerts"); setDrawer({ kind: "alert", family, band: null }); }}
+              onUnsubscribe={handleUnsubscribe}
+            />
+          ) : (
+          <>
+
+
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "1fr",
+            backgroundColor: T.bgDefault, borderRadius: 4,
+            boxShadow: SHADOW.e2, overflow: "hidden", minHeight: 560,
+          }}>
+
+            <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
+              <div style={{
+                display: "flex", alignItems: "center", gap: 8, padding: "12px 16px",
+                borderBottom: `1px solid ${T.divider}`, overflowX: "auto", flexWrap: "wrap",
+              }}>
+                <CatChip label="All" active={activeCat === "all"} onClick={() => setActiveCat("all")} />
+                {CATEGORIES.map((c) => (
+                  <CatChip
+                    key={c}
+                    label={c}
+                    active={activeCat === c}
+                    disabled={catCounts[c] === 0}
+                    onClick={() => setActiveCat(c)}
+                  />
+                ))}
+              </div>
+
+              {selected.length > 1 ? (
+                <div style={{
+                  minHeight: 64, padding: "8px 16px", borderBottom: `1px solid ${T.divider}`,
+                  backgroundColor: T.primarySelected,
+                  display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap",
+                }}>
+                  <div
+                    onClick={selectAllVisible}
+                    style={{
+                      width: 18, height: 18, borderRadius: 2,
+                      border: `2px solid ${T.primaryMain}`, backgroundColor: T.primaryMain,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      flexShrink: 0, cursor: "pointer",
+                    }}
+                  >
+                    {allVisibleSelected
+                      ? <Check size={13} color={T.white} strokeWidth={3} />
+                      : <span style={{ width: 10, height: 2, backgroundColor: T.white }} />}
+                  </div>
+                  <span style={{ ...TYPE.subtitle2, color: T.primaryDark }}>{selected.length} selected</span>
+                  <div style={{ flex: 1 }} />
+                  <Button onClick={() => setSelected([])}>Cancel</Button>
+                  <Button
+                    variant="contained"
+                    onClick={() => setDrawer({ kind: "batch", targets: selected.map(parseRowKey) })}
+                  >
+                    Add subscription
+                  </Button>
+                </div>
+              ) : (
+                <div style={{
+                  minHeight: 64, padding: "8px 16px", borderBottom: `1px solid ${T.divider}`,
+                  display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap",
+                }}>
+                  <div style={{
+                    display: "flex", alignItems: "center", gap: 8,
+                    height: 40, padding: "0 12px", boxSizing: "border-box",
+                    border: `1px solid ${T.outlined}`, borderRadius: 4,
+                    flex: "1 1 300px", maxWidth: 420, backgroundColor: T.bgDefault,
+                  }}>
+                    <Search size={20} color={T.textSecondary} />
+                    <input
+                      type="text"
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      placeholder="Search by alert name, regulation, or category…"
+                      style={{ ...TYPE.body2, flex: 1, border: "none", outline: "none", color: T.textPrimary, backgroundColor: "transparent" }}
+                    />
+                    {search && <IconButton onClick={() => setSearch("")}><X size={16} /></IconButton>}
+                  </div>
+                  <div style={{ flex: 1 }} />
+                  {selected.length === 1 && (
+                    <span style={{ ...TYPE.caption, color: T.textSecondary }}>
+                      1 selected — check another to subscribe in bulk
+                    </span>
+                  )}
+                  {selected.length === 1 && <Button onClick={() => setSelected([])}>Clear</Button>}
+                  {visibleRowKeys.length > 0 && selected.length === 0 && (
+                    <Button onClick={selectAllVisible}>Select all {visibleRowKeys.length}</Button>
+                  )}
+                </div>
+              )}
+
+              <div style={{ flex: 1, overflowY: "auto" }}>
+                {/* Searching an address here used to filter invisibly — rows never
+                    show recipients. Hand it to the tab that does. */}
+                {emailQueryHint > 0 && (
+                  <div style={{
+                    display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap",
+                    padding: "12px 16px", backgroundColor: T.alertInfoBg,
+                    borderBottom: `1px solid ${T.divider}`,
+                  }}>
+                    <Info size={20} color={T.alertInfoColor} />
+                    <span style={{ ...TYPE.body2, color: T.alertInfoColor, flex: 1, minWidth: 200 }}>
+                      Looking for a person? {emailQueryHint} {emailQueryHint === 1 ? "subscription matches" : "subscriptions match"} “{search.trim()}”.
+                    </span>
+                    <Button onClick={() => onFindRecipient(search.trim())}>View in Subscriptions</Button>
+                  </div>
+                )}
+
+                {false && (
+                  <div style={{
+                    display: "grid", gridTemplateColumns: "auto 1fr auto auto",
+                    gap: 16, alignItems: "center", padding: "0 16px 0 8px", minHeight: 44,
+                    borderBottom: `1px solid ${T.divider}`, backgroundColor: T.bgDefault,
+                  }}>
+                    <div style={{ width: 40 }} />
+                    <GridColHeader label="Alert" />
+                    <GridColHeader label="Subscriptions" align="right" />
+                    <div style={{ width: 20 }} />
+                  </div>
+                )}
+
+                {activeRegMeta && !activeRegMeta.hasAssets && (
+                  <div style={{ margin: 16 }}>
+                    <Alert severity="info">
+                      You don't have assets in {activeRegMeta.scope} yet. These alerts start firing if you add some.
+                    </Alert>
+                  </div>
+                )}
+
+                {/* V3 has no rail, so an unfiltered list needs to state the
+                    footprint gap up front — otherwise it's only on the rows. */}
+                {false && (
+                  <div style={{ margin: 16 }}>
+                    <Alert severity="info">
+                      No assets in {noAssetRegs.map((r) => r.scope).join(", ")} yet.
+                      Alerts tagged {noAssetRegs.map((r) => r.id).join(", ")} are listed but won't fire.
+                    </Alert>
+                  </div>
+                )}
+
+                {rows.length === 0 ? (
+                  <div style={{ ...TYPE.body2, padding: 48, textAlign: "center", color: T.textSecondary }}>
+                    {activeCat !== "all" && catCounts[activeCat] === 0
+                      ? `${activeReg} has no ${activeCat.toLowerCase()} alerts.`
+                      : "No alerts match. Try a different category or clear your search."}
+                  </div>
+                ) : renderItems.map((item, i) => {
+                  if (item.type === "header") {
+                    const r = item.reg;
+                    const keysInSection = rows
+                      .filter((x) => x.family.reg === r.id)
+                      .map((x) => x.family.id + (x.band ? `::${x.band}` : ""));
+                    const allOn = keysInSection.every((k) => selected.includes(k));
+                    return (
+                      /* Section band copied from Manage Your Account: grey strip,
+                         title left, action link right. */
+                      <div key={`h-${r.id}`} style={{
+                        display: "flex", alignItems: "center", gap: 12,
+                        padding: "12px 16px", backgroundColor: T.grey50,
+                        borderTop: i > 0 ? `1px solid ${T.divider}` : "none",
+                        borderBottom: `1px solid ${T.divider}`,
+                      }}>
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ ...TYPE.subtitle1, color: T.textPrimary }}>{r.id}</div>
+                          <div style={{ ...TYPE.caption, color: r.hasAssets ? T.textSecondary : T.warningMain }}>
+                            {r.hasAssets
+                              ? `${r.scope} · ${item.count} ${item.count === 1 ? "alert" : "alerts"}`
+                              : `${r.scope} · no assets, these won't fire`}
+                          </div>
+                        </div>
+                        <div style={{ flex: 1 }} />
+                        <Button
+                          size="small"
+                          onClick={() => setSelected((sel) => allOn
+                            ? sel.filter((k) => !keysInSection.includes(k))
+                            : [...new Set([...sel, ...keysInSection])])}
+                        >
+                          {allOn ? "Clear selection" : `Select all ${keysInSection.length}`}
+                        </Button>
+                      </div>
+                    );
+                  }
+
+                  const { family, band } = item;
+                  const rowKey = family.id + (band ? `::${band}` : "");
+                  // Band-scoped rows only count subscriptions that cover that band,
+                  // otherwise Approaching and Due would show identical badges.
+                  const list = (store[family.id] || []).filter((s) => (band ? s.bands[band] : true));
+                  const isSel = selected.includes(rowKey);
+                  const name = band ? `${family.base} ${band}` : family.base;
+                  const regMeta = REGULATIONS.find((r) => r.id === family.reg);
+                  const showNoAssets = false;
+                  const allRecipients = [...new Set(list.flatMap((s) => s.recipients))];
+                  const activeCount = list.filter((s) => s.status === "active").length;
+                  const pausedCount = list.length - activeCount;
+                  // Which regions this alert is actually covered in, across all
+                  // its subscriptions — a gap here is a monitoring gap.
+                  const famCoveredIds = locationsForReg(family.reg).map((l) => l.id);
+                  const famRegions = REGIONS.filter((rg) => famCoveredIds.some((id) => locById(id).region === rg.id));
+                  const coveredRegions = REGIONS.filter((rg) =>
+                    list.some((sub) => resolveScope(sub.scope, famCoveredIds).some((id) => locById(id).region === rg.id))
+                  );
+                  const regionGap = list.length > 0 && coveredRegions.length < famRegions.length;
+
+                  return (
+                    <div
+                      key={rowKey}
+                      onClick={() => setDrawer({ kind: "alert", family, band })}
+                      style={{
+                        minHeight: 72, padding: "8px 16px 8px 8px",
+                        display: "grid", gridTemplateColumns: "auto 1fr auto auto",
+                        gap: 16, alignItems: "center",
+                        borderBottom: i < renderItems.length - 1 ? `1px solid ${T.divider}` : "none",
+                        backgroundColor: isSel ? T.primarySelected : T.bgDefault,
+                        opacity: regMeta?.hasAssets ? 1 : 0.6, cursor: "pointer",
+                      }}
+                      onMouseEnter={(e) => { if (!isSel) e.currentTarget.style.backgroundColor = T.actionHover; }}
+                      onMouseLeave={(e) => { if (!isSel) e.currentTarget.style.backgroundColor = T.bgDefault; }}
+                    >
+                      {/* 40px target per MUI's touch minimum — the 18px box was
+                          too small, so near-misses fell through to the row. */}
+                      <div
+                        onClick={(e) => { e.stopPropagation(); toggleSelect(rowKey); }}
+                        title={isSel ? "Deselect" : "Select for bulk subscribe"}
+                        style={{
+                          width: 40, height: 40, borderRadius: "50%", flexShrink: 0, cursor: "pointer",
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = T.actionHover; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
+                      >
+                        <div style={{
+                          width: 18, height: 18, borderRadius: 2,
+                          border: `2px solid ${isSel ? T.primaryMain : "rgba(26,23,59,0.56)"}`,
+                          backgroundColor: isSel ? T.primaryMain : "transparent",
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          pointerEvents: "none",
+                        }}>
+                          {isSel && <Check size={13} color={T.white} strokeWidth={3} />}
+                        </div>
+                      </div>
+
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{
+                          ...TYPE.body1, color: T.textPrimary,
+                          display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap",
+                        }}>
+                          {name}
+                          {/* No rail in V3, so the no-assets state has to ride on the row. */}
+                          {showNoAssets && (
+                            <span style={{
+                              ...TYPE.badgeLabel, height: 20, padding: "0 8px", borderRadius: 10,
+                              backgroundColor: T.alertWarningBg, color: T.alertWarningColor,
+                              display: "inline-flex", alignItems: "center", flexShrink: 0,
+                            }}>
+                              no assets
+                            </span>
+                          )}
+                        </div>
+                        <div style={{ ...TYPE.caption, color: T.textSecondary }}>
+                          {activeReg === "all" && <span>{family.reg} · </span>}
+                          {activeCat === "all" && <span>{family.cat} · </span>}
+                          <span>{family.bands.join(" / ")}</span>
+                          {list.length > 0 && (
+                            <span style={{ color: regionGap ? T.warningMain : T.textSecondary }}>
+                              {" · "}
+                              {coveredRegions.length === famRegions.length
+                                ? `all ${famRegions.length} regions covered`
+                                : `${coveredRegions.length} of ${famRegions.length} regions covered`}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                        {pausedCount > 0 && (
+                          <span
+                            title={`${pausedCount} paused`}
+                            style={{
+                              ...TYPE.badgeLabel, minWidth: 24, height: 24, padding: "0 8px", borderRadius: 12,
+                              backgroundColor: T.actionSelected, color: T.textSecondary,
+                              display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 4,
+                            }}
+                          >
+                            <Pause size={12} />{pausedCount}
+                          </span>
+                        )}
+                        {activeCount > 0 && (
+                          <span
+                            title={`${activeCount} active` + (allRecipients.length ? `\n\n${allRecipients.join("\n")}` : "")}
+                            style={{
+                              ...TYPE.badgeLabel, minWidth: 24, height: 24, padding: "0 8px", borderRadius: 12,
+                              backgroundColor: T.primaryMain, color: T.white,
+                              display: "inline-flex", alignItems: "center", justifyContent: "center",
+                            }}
+                          >
+                            {activeCount}
+                          </span>
+                        )}
+                      </div>
+
+                      <ChevronRight size={20} color="rgba(26,23,59,0.56)" style={{ flexShrink: 0 }} />
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          </>
+          )}
+        </div>
+      </div>
+
+      {/* Trakref's standard success toast: white card, filled green check. */}
+      {toast && (
+        <div style={{
+          position: "fixed", top: 124, left: "50%", transform: "translateX(-50%)",
+          zIndex: 60, maxWidth: 560,
+          display: "flex", alignItems: "center", gap: 14,
+          padding: "16px 24px", borderRadius: 8,
+          backgroundColor: T.white, boxShadow: "0 4px 16px rgba(0,0,0,0.22)",
+        }}>
+          <span style={{
+            width: 26, height: 26, borderRadius: "50%", flexShrink: 0,
+            backgroundColor: "#4CAF50", display: "inline-flex",
+            alignItems: "center", justifyContent: "center",
+          }}>
+            <Check size={17} color={T.white} strokeWidth={3} />
+          </span>
+          <span style={{ ...TYPE.body1, color: T.textPrimary }}>{toast}</span>
+        </div>
+      )}
+
+
+      {drawer?.kind === "alert" && (
+        <AlertDrawer
+          family={drawer.family}
+          band={drawer.band}
+          existing={store[drawer.family.id]}
+          onClose={() => setDrawer(null)}
+          onSave={(subscriptions) => handleAlertSave(drawer.family.id, subscriptions)}
+        />
+      )}
+      {drawer?.kind === "batch" && (
+        <BatchDrawer targets={drawer.targets} store={store} onClose={() => setDrawer(null)} onSave={handleBatchSave} />
+      )}
+    </div>
+  );
+}
+
+
+ReactDOM.createRoot(document.getElementById('root')).render(<ManageEmailAlerts />);
+</script>
+</body>
+</html>
